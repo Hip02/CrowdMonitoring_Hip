@@ -11,3 +11,4 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Ignorer les modèles yolo téléchargés
+yolo*.pt
