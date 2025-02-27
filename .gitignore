@@ -1,0 +1,13 @@
+# Ignorer les fichiers de dataset RAW
+DatasetCreation/RawDataDL/
+DatasetCreation/Videos
+
+# Ignorer les fichiers temporaires
+*.pyc
+__pycache__/
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignorer les modèles yolo téléchargés
