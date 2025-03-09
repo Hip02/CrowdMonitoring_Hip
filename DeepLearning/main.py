@@ -39,7 +39,7 @@ for exp in l_exp:
     sys.stdout = TeeLogger(sys.stdout, open(log_file_path, "w"))
     sys.stderr = sys.stdout
 
-    myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=50)
+    myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
     # Train the network
     train_losses, val_losses = myNetwork.train()
