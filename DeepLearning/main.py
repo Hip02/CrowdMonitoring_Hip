@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 # Load Data
-base_path = "/linux/hhilgers/Dataset"
+base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
 l_exp = [f"Regression/Reg_1"] # Regression/Reg_1
