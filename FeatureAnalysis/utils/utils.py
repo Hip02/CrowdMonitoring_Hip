@@ -1240,6 +1240,28 @@ def plot_results(all_results):
         plt.ylim(0, 100)
         plt.show()
 
+def plot_results_DL(all_results, dl_results_list):
+    """Génère les courbes de classification pour chaque modèle, en comparant avec une courbe supplémentaire de DL"""
+    for model_name, results in all_results.items():
+        df_results = pd.DataFrame(results)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(df_results["N"], df_results["Without PCA - Validation acc."], 'b--*', label="Without PCA - Validation acc.")
+        plt.plot(df_results["N"], df_results["Without PCA - Testing acc."], 'b-*', label="Without PCA - Testing acc.")
+        plt.plot(df_results["N"], df_results["With PCA - Validation acc."], 'r--*', label="With PCA - Validation acc.")
+        plt.plot(df_results["N"], df_results["With PCA - Testing acc."], 'r-*', label="With PCA - Testing acc.")
+        plt.plot(df_results["N"], df_results["Random Guess"], 'k-*', label="Random Guess", linewidth=2)
+        plt.plot(df_results["N"], dl_results_list, linestyle='-', marker='*', color='#e37036', label="CNN V1", linewidth=2)
+
+        plt.xlabel("Number of classes $N_c$")
+        plt.ylabel("Accuracy (%)")
+        plt.title(f"Classification Accuracy vs. Number of Classes ({model_name})")
+        plt.legend()
+        plt.grid(True)
+        plt.ylim(0, 100)
+        plt.show()
+
+
 def run_classification_experiment(features, labels, n_components_pca=6, n_classes_range=(2, 10)):
     """Exécute l'entraînement, l'évaluation et l'affichage des performances des modèles."""
     models = define_models()
@@ -1258,6 +1280,8 @@ def run_classification_experiment(features, labels, n_components_pca=6, n_classe
                 all_results[model_name][key].extend(results[model_name][key])
 
     plot_results(all_results)
+
+    return all_results
 
 
 def train_and_plot_classification(model, features, labels, test_size=0.2, random_state=42):

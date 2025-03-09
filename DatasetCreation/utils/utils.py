@@ -135,8 +135,10 @@ def process_radar_file(input_radar_raw_filename, indexFrameProcess=None, saveMag
             - timestamps: timestamps of the radar maps
         )
     """
-
+    indexFrameProcess = np.arange(0,10)
     rsData = fmcwProcess(input_radar_raw_filename, osFactor, indexFrameProcess=indexFrameProcess, clrRF=clrRF, disp=True)
+
+    print(rsData['info'])
 
     timestamps = rsData["timestamps"]
     magnitudes = []
