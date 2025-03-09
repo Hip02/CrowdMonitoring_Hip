@@ -8,7 +8,7 @@ import os
 base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
-l_exp = [f"Regression/Reg_1"] # Regression/Reg_1
+l_exp = [f"Regression/BET_Reg_1"] # Regression/Reg_1
 
 data_loader = DataLoader(base_path, exp_list=all)
 
