@@ -12,3 +12,6 @@ __pycache__/
 
 # Ignorer les modèles yolo téléchargés
 yolo*.pt
+
+# Ignorer les poids de modèle
+DeepLearning/results/
