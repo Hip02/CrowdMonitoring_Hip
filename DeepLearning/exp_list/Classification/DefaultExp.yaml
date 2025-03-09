@@ -11,8 +11,9 @@ MODEL:
   NB_CHANNELS: 1
   
 TRAINING: 
+  PREDICTION_TYPE: classification
   LEARNING_RATE: 0.001
-  EPOCH: 100
+  EPOCH: 2
   BATCH_SIZE: 16
   # cpu (to run on cpu) or cuda (to run on gpu)
   DEVICE: cpu 

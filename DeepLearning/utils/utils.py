@@ -25,7 +25,9 @@ class LazyImageLoader:
         if not os.path.exists(self.directory):
             return []
         
-        files = [f for f in os.listdir(self.directory) if f.endswith(".png")]
+        # Ne garde que les fichiers .png normaux (ignore ceux qui commencent par '._' ou autres fichiers cachés)
+        files = [f for f in os.listdir(self.directory)
+                if f.endswith(".png") and not f.startswith("._") and not f.startswith(".")]
 
         # Fonction de tri qui extrait uniquement le numéro du nom de fichier
         def extract_number(filename):
@@ -48,7 +50,10 @@ class LazyImageLoader:
     def __len__(self):
         """Retourne le nombre d'images disponibles."""
         return len(self.file_list)
-
+    
+    def __str__(self):
+        """Affiche les noms de toutes les images disponibles."""
+        return str(self.file_list)
 
 
 class DataLoader:
@@ -270,7 +275,9 @@ class DopplerDataset(Dataset):
         super(DopplerDataset, self).__init__()
         self.mode = mode.lower()
         self.train_split = param["DATASET"]["TRAIN_SPLIT"] if param else 0.8
-        self.nb_classes = param["DATASET"]["NB_CLASSES"] if param else 2  # Nombre de classes par défaut : 2
+        self.predictionType = param["TRAINING"]["PREDICTION_TYPE"] if param else "regression"
+        if self.predictionType == "classification":
+            self.nb_classes = param["DATASET"]["NB_CLASSES"] if param else 2  # Nombre de classes par défaut : 2
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
 
@@ -281,7 +288,8 @@ class DopplerDataset(Dataset):
         self.data_indices = self._create_file_indices()
 
         # Calcul des valeurs min et max pour la classification
-        self.min_label, self.max_label = self._compute_label_range()
+        if self.predictionType == "classification":
+            self.min_label, self.max_label = self._compute_label_range()
 
         # Split train/val/test de manière stable
         self.train_indices, self.val_indices, self.test_indices = self._split_dataset(shuffle, random_seed)
@@ -352,15 +360,20 @@ class DopplerDataset(Dataset):
 
         # Récupération du label et conversion en classe
         labels = self.data_loader.get_labels(exp_name)
-        label = labels[image_index] if image_index < len(labels) else self.min_label  # Label par défaut si absent
-        label_class = self._convert_label_to_class(label)  # Transformation en classe
+        label = labels[image_index]
+
+        if self.predictionType == "classification":
+            label = self._convert_label_to_class(label)  # Transformation en classe
 
         # Conversion en Tensor
         img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1)  # (1, 512, 512)
         max_tensor = torch.tensor([max_value], dtype=torch.float32)  # (1,)
-        class_tensor = torch.tensor(label_class, dtype=torch.long)  # Label sous forme d'entier (classe)
+        if self.predictionType == "classification":
+            label_tensor = torch.tensor(label, dtype=torch.long)  # Label sous forme d'entier
+        else:
+            label_tensor = torch.tensor([label], dtype=torch.float32) # Label sous forme de float
 
-        return img_tensor, max_tensor, class_tensor
+        return img_tensor, max_tensor, label_tensor
 
     def _convert_label_to_class(self, label):
         """Convertit un label en classe en fonction du nombre de classes définies."""

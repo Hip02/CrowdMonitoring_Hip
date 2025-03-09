@@ -4,7 +4,8 @@ from tqdm import tqdm
 import os
 import copy
 
-from networks.architectures.network import DopplerNet
+from networks.architectures.network_classification import DopplerNetClassification
+from networks.architectures.network_regression import DopplerNetRegression
 from utils.utils import DopplerDataset
 
 import torch
@@ -19,15 +20,20 @@ def createFolder(desiredPath):
 
 class Network_Class: 
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
-        self.resultsPath   = resultsPath
-        self.epoch         = param["TRAINING"]["EPOCH"]
-        self.device        = param["TRAINING"]["DEVICE"]
-        self.lr            = param["TRAINING"]["LEARNING_RATE"]
-        self.batchSize     = param["TRAINING"]["BATCH_SIZE"]
+        self.resultsPath    = resultsPath
+        self.epoch          = param["TRAINING"]["EPOCH"]
+        self.device         = param["TRAINING"]["DEVICE"]
+        self.lr             = param["TRAINING"]["LEARNING_RATE"]
+        self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
+        self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
 
-        self.model = DopplerNet(param).to(self.device)
+        if self.predictionType == "classification":
+            self.model = DopplerNetClassification(param).to(self.device)
+            self.criterion = nn.CrossEntropyLoss()
+        if self.predictionType == "regression":
+            self.model = DopplerNetRegression(param).to(self.device)
+            self.criterion = nn.MSELoss()
 
-        self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
@@ -52,15 +58,18 @@ class Network_Class:
         for i in range(self.epoch):
             self.model.train(True)
             train_loss = 0.0
+            total_train_samples = 0
 
-            # Barre de progression pour afficher l'entraînement batch par batch
             progress_bar = tqdm(self.trainDataLoader, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
 
             for image_magnitude, max_doppler, labels in progress_bar:
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
-                labels = labels.to(self.device)
 
+                if self.predictionType == "regression":
+                    labels = labels.view(-1, 1)
+
+                labels = labels.to(self.device)
                 self.optimizer.zero_grad()
 
                 outputs = self.model(image_magnitude, max_doppler)
@@ -68,74 +77,98 @@ class Network_Class:
                 loss.backward()
                 self.optimizer.step()
 
-                train_loss += loss.item()
+                batch_size = labels.size(0)
+                train_loss += loss.item() * batch_size  # somme des pertes
+                total_train_samples += batch_size
 
-                # Mise à jour dynamique de la barre de progression avec la perte
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
-            train_losses.append(train_loss)
-        
+            mean_train_loss = train_loss / total_train_samples
+            train_losses.append(mean_train_loss)
+
             # Validation
             self.model.eval()
             val_loss = 0.0
+            total_val_samples = 0
 
             with torch.no_grad():
-                for (image_magnitude, max_doppler, labels) in self.valDataLoader:
+                for image_magnitude, max_doppler, labels in self.valDataLoader:
                     image_magnitude = image_magnitude.to(self.device)
                     max_doppler = max_doppler.to(self.device)
-                    labels = labels.to(self.device)
 
+                    if self.predictionType == "regression":
+                        labels = labels.view(-1, 1)
+
+                    labels = labels.to(self.device)
                     outputs = self.model(image_magnitude, max_doppler)
                     loss = self.criterion(outputs, labels)
 
-                    val_loss += loss.item()
-            
-            val_losses.append(val_loss)
+                    batch_size = labels.size(0)
+                    val_loss += loss.item() * batch_size
+                    total_val_samples += batch_size
 
-            print(f"✅ Epoch {i + 1}/{self.epoch} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+            mean_val_loss = val_loss / total_val_samples
+            val_losses.append(mean_val_loss)
 
+            print(f"✅ Epoch {i + 1}/{self.epoch} | Train Loss: {mean_train_loss:.4f} | Val Loss: {mean_val_loss:.4f}")
 
-            if val_loss < best_loss:
-                best_loss = val_loss
+            if mean_val_loss < best_loss:
+                best_loss = mean_val_loss
                 best_model = copy.deepcopy(self.model)
-
-                # Save the model weights
-                wghtsPath  = self.resultsPath + '/_Weights/'
+                wghtsPath = self.resultsPath + '/_Weights/'
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
                 print("Model saved")
 
         return train_losses, val_losses
+
     
     def test(self):
-        self.model.eval()  # Mode évaluation
+        self.model.eval()
 
-        correct_predictions = 0
-        total_samples = 0
+        if self.predictionType == "regression":
+            total_loss = 0.0
+            total_samples = 0
+            with torch.no_grad():
+                progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
+                for image_magnitude, max_doppler, labels in progress_bar:
+                    image_magnitude = image_magnitude.to(self.device)
+                    max_doppler = max_doppler.to(self.device)
+                    labels = labels.view(-1, 1).to(self.device)
 
-        with torch.no_grad():  # Désactiver le calcul des gradients pour accélérer l'inférence
-            progress_bar = tqdm(self.testDataLoader, desc="Testing", unit="batch")  # Barre de progression
-            for (image_magnitude, max_doppler, labels) in progress_bar:
-                image_magnitude = image_magnitude.to(self.device)
-                max_doppler = max_doppler.to(self.device)
-                labels = labels.to(self.device)
+                    outputs = self.model(image_magnitude, max_doppler)
+                    loss = self.criterion(outputs, labels)
 
-                # Prédictions
-                outputs = self.model(image_magnitude, max_doppler)
-                _, preds = torch.max(outputs, 1)
+                    batch_size = labels.size(0)
+                    total_loss += loss.item() * batch_size
+                    total_samples += batch_size
 
-                # Calcul du nombre de prédictions correctes
-                correct_predictions += (preds == labels).sum().item()
-                total_samples += labels.size(0)
+                    progress_bar.set_postfix(mse=f"{loss.item():.4f}")
 
-                # Mise à jour du texte de la barre de progression
-                progress_bar.set_postfix(acc=f"{correct_predictions / total_samples:.4f}")
-                
-        # Calcul de la précision totale
-        accuracy = correct_predictions / total_samples
-        print(f"Test Accuracy: {accuracy:.4f}")
+            mean_loss = total_loss / total_samples
+            print(f"📏 Test MSE (moyenne par échantillon): {mean_loss:.4f}")
+            return mean_loss
 
-        return accuracy
+        else:  # Classification
+            correct_predictions = 0
+            total_samples = 0
+            with torch.no_grad():
+                progress_bar = tqdm(self.testDataLoader, desc="Testing (classification)", unit="batch")
+                for image_magnitude, max_doppler, labels in progress_bar:
+                    image_magnitude = image_magnitude.to(self.device)
+                    max_doppler = max_doppler.to(self.device)
+                    labels = labels.to(self.device)
+
+                    outputs = self.model(image_magnitude, max_doppler)
+                    _, preds = torch.max(outputs, 1)
+
+                    correct_predictions += (preds == labels).sum().item()
+                    total_samples += labels.size(0)
+                    progress_bar.set_postfix(acc=f"{correct_predictions / total_samples:.4f}")
+
+            accuracy = correct_predictions / total_samples
+            print(f"✅ Test Accuracy: {accuracy:.4f}")
+            return accuracy
 
     def visualize_batch(self, num_images=4):
         """

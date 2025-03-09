@@ -8,9 +8,9 @@ import torch.nn.functional as F
 #                                                                            #
 ##############################################################################
 
-class DopplerNet(nn.Module):
+class DopplerNetClassification(nn.Module):
     def __init__(self, param):
-        super(DopplerNet, self).__init__()
+        super(DopplerNetClassification, self).__init__()
         self.nb_channels = param["MODEL"]["NB_CHANNELS"]
         self.num_classes = param["DATASET"]["NB_CLASSES"]  # Nombre de classes de sortie
 
