@@ -36,7 +36,7 @@ class LazyImageLoader:
 
         return sorted(files, key=extract_number)  # Trie la liste selon le numéro
 
-    def load_image(self, index):
+    def load_image(self, index, normalize=True):
         """Charge une image PNG spécifique lorsqu’elle est demandée."""
         #print(f"index type = {type(index)}, index={index}")
         if 0 <= index < len(self.file_list):
@@ -44,6 +44,8 @@ class LazyImageLoader:
             img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)  # Chargement en niveaux de gris
             if img is not None:
                 img = np.expand_dims(img, axis=-1)  # Ajout de la dimension du canal
+                if normalize:
+                    img = img / 255.0
                 return img
         return None  # Retourne None si l'image est introuvable ou si l'index est hors limites
     

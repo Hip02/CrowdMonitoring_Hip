@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from tqdm import tqdm
 import os
 import copy
@@ -47,7 +48,7 @@ class Network_Class:
         print("✅ Network Initialized")
 
     def loadWeight(self):
-        self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl'))
+        self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
 
     def train(self):
@@ -129,6 +130,9 @@ class Network_Class:
         if self.predictionType == "regression":
             total_loss = 0.0
             total_samples = 0
+            all_preds = []
+            all_labels = []
+
             with torch.no_grad():
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
@@ -143,15 +147,34 @@ class Network_Class:
                     total_loss += loss.item() * batch_size
                     total_samples += batch_size
 
+                    all_preds.extend(outputs.cpu().numpy().flatten())
+                    all_labels.extend(labels.cpu().numpy().flatten())
+
                     progress_bar.set_postfix(mse=f"{loss.item():.4f}")
 
             mean_loss = total_loss / total_samples
             print(f"📏 Test MSE (moyenne par échantillon): {mean_loss:.4f}")
+
+            # 📈 Scatter plot: predictions vs true labels
+            plt.figure(figsize=(8, 6))
+            plt.scatter(all_labels, all_preds, alpha=0.6)
+            plt.plot([min(all_labels), max(all_labels)], [min(all_labels), max(all_labels)], 'r--', label='Perfect prediction')
+            plt.xlabel('True labels')
+            plt.ylabel('Predicted labels')
+            plt.title('Regression: Predictions vs True Labels')
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
             return mean_loss
 
         else:  # Classification
             correct_predictions = 0
             total_samples = 0
+            all_preds = []
+            all_labels = []
+
             with torch.no_grad():
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (classification)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
@@ -164,12 +187,25 @@ class Network_Class:
 
                     correct_predictions += (preds == labels).sum().item()
                     total_samples += labels.size(0)
-                    progress_bar.set_postfix(acc=f"{correct_predictions / total_samples:.4f}")
+
+                    all_preds.extend(preds.cpu().numpy())
+                    all_labels.extend(labels.cpu().numpy())
+
+                    acc = correct_predictions / total_samples
+                    progress_bar.set_postfix(acc=f"{acc:.4f}")
 
             accuracy = correct_predictions / total_samples
             print(f"✅ Test Accuracy: {accuracy:.4f}")
-            return accuracy
 
+            # 📊 Confusion matrix
+            cm = confusion_matrix(all_labels, all_preds)
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+            disp.plot(cmap='Blues')
+            plt.title('Classification: Confusion Matrix')
+            plt.tight_layout()
+            plt.show()
+
+        return accuracy
     def visualize_batch(self, num_images=4):
         """
         Affiche un batch d'images Doppler avec leurs labels et valeurs max Doppler.
