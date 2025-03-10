@@ -155,6 +155,10 @@ class Network_Class:
             mean_loss = total_loss / total_samples
             print(f"📏 Test MSE (moyenne par échantillon): {mean_loss:.4f}")
 
+            # Denormalization
+            all_preds = np.array(all_preds) * self.dataSetTest.std_label + self.dataSetTest.mean_label
+            all_labels = np.array(all_labels) * self.dataSetTest.std_label + self.dataSetTest.mean_label
+
             # 📈 Scatter plot: predictions vs true labels
             plt.figure(figsize=(8, 6))
             plt.scatter(all_labels, all_preds, alpha=0.6)

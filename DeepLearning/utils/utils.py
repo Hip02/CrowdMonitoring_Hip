@@ -36,7 +36,7 @@ class LazyImageLoader:
 
         return sorted(files, key=extract_number)  # Trie la liste selon le numéro
 
-    def load_image(self, index, normalize=True):
+    def load_image(self, index):
         """Charge une image PNG spécifique lorsqu’elle est demandée."""
         #print(f"index type = {type(index)}, index={index}")
         if 0 <= index < len(self.file_list):
@@ -44,8 +44,6 @@ class LazyImageLoader:
             img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)  # Chargement en niveaux de gris
             if img is not None:
                 img = np.expand_dims(img, axis=-1)  # Ajout de la dimension du canal
-                if normalize:
-                    img = img / 255.0
                 return img
         return None  # Retourne None si l'image est introuvable ou si l'index est hors limites
     
@@ -292,6 +290,8 @@ class DopplerDataset(Dataset):
         # Calcul des valeurs min et max pour la classification
         if self.predictionType == "classification":
             self.min_label, self.max_label = self._compute_label_range()
+        else:
+            self.mean_label, self.std_label = self._compute_label_stats()
 
         # Split train/val/test de manière stable
         self.train_indices, self.val_indices, self.test_indices = self._split_dataset(shuffle, random_seed)
@@ -310,6 +310,11 @@ class DopplerDataset(Dataset):
         """Calcule et stocke les valeurs min et max des labels."""
         all_labels = self.data_loader.get_labels()
         return min(all_labels), max(all_labels)
+
+    def _compute_label_stats(self):
+        """Calcule et stocke la moyenne et l'écart-type des labels."""
+        all_labels = self.data_loader.get_labels()
+        return np.mean(all_labels), np.std(all_labels)
 
     def _create_file_indices(self):
         """Crée une liste (expérience, index) pour le lazy loading."""
@@ -366,6 +371,8 @@ class DopplerDataset(Dataset):
 
         if self.predictionType == "classification":
             label = self._convert_label_to_class(label)  # Transformation en classe
+        else:
+            label = (label - self.mean_label) / self.std_label
 
         # Conversion en Tensor
         img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1)  # (1, 512, 512)
@@ -390,3 +397,15 @@ class DopplerDataset(Dataset):
         label_class = max(min(label_class, self.nb_classes - 1), 0)
 
         return label_class
+    
+def plot_learning_curves(train_losses, val_losses, title="Learning Curves"):
+    """Plot the learning curves of a training session."""
+    plt.figure(figsize=(12, 6))
+    plt.plot(train_losses, label="Train Loss", color='blue')
+    plt.plot(val_losses, label="Validation Loss", color='red')
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
