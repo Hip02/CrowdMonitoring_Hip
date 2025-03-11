@@ -6,7 +6,7 @@ import os
 import copy
 
 from networks.architectures.network_classification import DopplerNetClassification
-from networks.architectures.network_regression import DopplerNetRegression
+from networks.architectures.network_regression import DopplerNetRegression, DopplerNetRegressionTemporal
 from utils.utils import DopplerDataset
 
 import torch
@@ -33,6 +33,9 @@ class Network_Class:
             self.criterion = nn.CrossEntropyLoss()
         if self.predictionType == "regression":
             self.model = DopplerNetRegression(param).to(self.device)
+            self.criterion = nn.MSELoss()
+        if self.predictionType == "regression_temporal":
+            self.model = DopplerNetRegressionTemporal(param).to(self.device)
             self.criterion = nn.MSELoss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -67,7 +70,7 @@ class Network_Class:
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
 
-                if self.predictionType == "regression":
+                if self.predictionType == "regression" or self.predictionType == "regression_temporal":
                     labels = labels.view(-1, 1)
 
                 labels = labels.to(self.device)
@@ -97,7 +100,7 @@ class Network_Class:
                     image_magnitude = image_magnitude.to(self.device)
                     max_doppler = max_doppler.to(self.device)
 
-                    if self.predictionType == "regression":
+                    if self.predictionType == "regression" or self.predictionType == "regression_temporal":
                         labels = labels.view(-1, 1)
 
                     labels = labels.to(self.device)
@@ -127,7 +130,7 @@ class Network_Class:
     def test(self):
         self.model.eval()
 
-        if self.predictionType == "regression":
+        if self.predictionType == "regression" or self.predictionType == "regression_temporal":
             total_loss = 0.0
             total_samples = 0
             all_preds = []
@@ -158,6 +161,10 @@ class Network_Class:
             # Denormalization
             all_preds = np.array(all_preds) * self.dataSetTest.std_label + self.dataSetTest.mean_label
             all_labels = np.array(all_labels) * self.dataSetTest.std_label + self.dataSetTest.mean_label
+
+            # Compute denormalized MSE
+            denorm_mse = np.mean((all_preds - all_labels) ** 2)
+            print(f"📏 Test MSE (denormalized): {denorm_mse:.4f}")
 
             # 📈 Scatter plot: predictions vs true labels
             plt.figure(figsize=(8, 6))

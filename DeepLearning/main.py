@@ -9,7 +9,7 @@ import sys
 base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
-l_exp = ["Regression/BET_Reg_48CH"]#, "Regression/BET_Reg_48CH"]
+l_exp = ["Regression/BET_Reg_4"]#, "Regression/BET_Reg_48CH"]
 
 data_loader = DataLoader(base_path, exp_list=all)
 

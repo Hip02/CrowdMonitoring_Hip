@@ -259,44 +259,33 @@ class DataLoader:
 
 
 class DopplerDataset(Dataset):
-    """
-    Dataset PyTorch qui utilise DataLoader pour charger les Doppler Maps (512x512, 1)
-    avec une valeur max associée, tout en respectant le lazy loading.
-
-    Args:
-        - data_loader (DataLoader) : Instance de DataLoader contenant les fichiers et max_values.
-        - mode (str) : "train", "val" ou "test" pour sélectionner la bonne partition.
-        - param (dict) : Contient "TRAIN_SPLIT" pour la répartition train/val/test.
-        - shuffle (bool) : Mélanger les données.
-        - random_seed (int) : Permet de garder un split stable.
-    """
-    
     def __init__(self, data_loader, mode="train", param=None, shuffle=True, random_seed=42, sub_sample_factor=1):
         super(DopplerDataset, self).__init__()
         self.mode = mode.lower()
-        self.train_split = param["DATASET"]["TRAIN_SPLIT"] if param else 0.8
-        self.predictionType = param["TRAINING"]["PREDICTION_TYPE"] if param else "regression"
+        self.train_split = param["DATASET"]["TRAIN_SPLIT"]
+        self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         if self.predictionType == "classification":
-            self.nb_classes = param["DATASET"]["NB_CLASSES"] if param else 2  # Nombre de classes par défaut : 2
+            self.nb_classes = param["DATASET"]["NB_CLASSES"]
+
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
-
-        # Liste des expériences disponibles
         self.exp_list = self.data_loader.exp_list
 
-        # Création d'une liste de (expérience, index) pour récupérer les images
+        # Nouveau paramètre
+        self.use_prev_frames = param["MODEL"].get("USE_PREV_FRAMES", False)
+        self.nb_prev_frames = param["MODEL"].get("NB_PREV_FRAMES", 0)
+
         self.data_indices = self._create_file_indices()
 
-        # Calcul des valeurs min et max pour la classification
+        # Statistiques de labels
         if self.predictionType == "classification":
             self.min_label, self.max_label = self._compute_label_range()
         else:
             self.mean_label, self.std_label = self._compute_label_stats()
 
-        # Split train/val/test de manière stable
+        # Split des données
         self.train_indices, self.val_indices, self.test_indices = self._split_dataset(shuffle, random_seed)
 
-        # Sélection du bon sous-ensemble
         if self.mode == "train":
             self.data_indices = self.train_indices
         elif self.mode == "val":
@@ -306,97 +295,94 @@ class DopplerDataset(Dataset):
         else:
             raise ValueError("Le mode doit être 'train', 'val' ou 'test'.")
 
-    def _compute_label_range(self):
-        """Calcule et stocke les valeurs min et max des labels."""
-        all_labels = self.data_loader.get_labels()
-        return min(all_labels), max(all_labels)
-
-    def _compute_label_stats(self):
-        """Calcule et stocke la moyenne et l'écart-type des labels."""
-        all_labels = self.data_loader.get_labels()
-        return np.mean(all_labels), np.std(all_labels)
-
     def _create_file_indices(self):
-        """Crée une liste (expérience, index) pour le lazy loading."""
         data_indices = []
         for exp in self.exp_list:
-            num_images = len(self.data_loader.data["magnitudes"][exp])  # Nombre total d'images
-            data_indices.extend([(exp, i) for i in range(0, num_images, self.sub_sample_factor)])
+            num_images = len(self.data_loader.data["magnitudes"][exp])
+            # Commencer à nb_prev_frames pour que toutes les frames précédentes soient disponibles
+            for i in range(self.nb_prev_frames, num_images, self.sub_sample_factor):
+                data_indices.append((exp, i))  # i = frame cible
         return np.array(data_indices)
 
     def _split_dataset(self, shuffle, random_seed):
-        """Sépare les indices en train/val/test de manière stable."""
-        np.random.seed(random_seed)  # Fixer la seed pour rendre la séparation reproductible
+        np.random.seed(random_seed)
         indices = np.arange(len(self.data_indices))
-
         if shuffle:
-            np.random.shuffle(indices)  # Mélanger les indices si nécessaire
+            np.random.shuffle(indices)
 
-        # Définition des tailles
         train_size = int(len(indices) * self.train_split)
-        val_test_size = len(indices) - train_size
-        val_size = val_test_size // 2  # 50% du reste pour validation
-        test_size = val_test_size - val_size  # Reste pour test
+        val_size = (len(indices) - train_size) // 2
+        test_size = len(indices) - train_size - val_size
 
-        # Découpe des indices
         train_indices = indices[:train_size]
         val_indices = indices[train_size:train_size + val_size]
         test_indices = indices[train_size + val_size:]
 
         return self.data_indices[train_indices], self.data_indices[val_indices], self.data_indices[test_indices]
 
+    def _compute_label_range(self):
+        all_labels = self.data_loader.get_labels()
+        return min(all_labels), max(all_labels)
+
+    def _compute_label_stats(self):
+        all_labels = self.data_loader.get_labels()
+        return np.mean(all_labels), np.std(all_labels)
+
     def __len__(self):
-        """Retourne la taille du dataset sélectionné."""
         return len(self.data_indices)
 
     def __getitem__(self, idx):
-        """Charge une image Doppler, sa valeur max et son label converti en classe."""
-        exp_name, image_index = self.data_indices[idx]  # Récupérer l'expérience et l'index de l'image
-        image_index = int(image_index)  # Convertir en entier
-        #print(f"exp_name={exp_name}, image_index={image_index}")
-        # Chargement lazy de l'image Doppler
-        img = self.data_loader.get_magnitude(exp_name, image_index)
-        if img is None:
-            raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name}")
+        exp_name, image_index = self.data_indices[idx]
+        image_index = int(image_index)
 
-        img = img.astype(np.float32) / 255.0  # Normalisation
+        if self.use_prev_frames:
+            sequence = []
+            max_sequence = []
+            for i in range(image_index - self.nb_prev_frames, image_index + 1):  # <-- inclut frame cible !
+                img = self.data_loader.get_magnitude(exp_name, i)
+                if img is None:
+                    raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")
+                img = img.astype(np.float32) / 255.0
+                sequence.append(img[..., 0])  # (H, W)
 
-        # Récupération de la valeur max Doppler
-        max_doppler = self.data_loader.get_max_values(exp_name)
-        max_value = max_doppler[image_index] if image_index < len(max_doppler) else 0.0
+                max_val = self.data_loader.get_max_values(exp_name)
+                max_value = max_val[i] if i < len(max_val) else 0.0
+                max_sequence.append(max_value)
 
-        # Récupération du label et conversion en classe
+            img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (nb_prev_frames+1, H, W)
+            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (nb_prev_frames+1,)
+        
+        else:
+            img = self.data_loader.get_magnitude(exp_name, image_index)
+            if img is None:
+                raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name}")
+            img = img.astype(np.float32) / 255.0
+            img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1)  # (1, H, W)
+
+            max_val = self.data_loader.get_max_values(exp_name)
+            max_value = max_val[image_index] if image_index < len(max_val) else 0.0
+            max_tensor = torch.tensor([max_value], dtype=torch.float32)
+
+        # Label
         labels = self.data_loader.get_labels(exp_name)
         label = labels[image_index]
-
         if self.predictionType == "classification":
-            label = self._convert_label_to_class(label)  # Transformation en classe
+            label = self._convert_label_to_class(label)
+            label_tensor = torch.tensor(label, dtype=torch.long)
         else:
             label = (label - self.mean_label) / self.std_label
-
-        # Conversion en Tensor
-        img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1)  # (1, 512, 512)
-        max_tensor = torch.tensor([max_value], dtype=torch.float32)  # (1,)
-        if self.predictionType == "classification":
-            label_tensor = torch.tensor(label, dtype=torch.long)  # Label sous forme d'entier
-        else:
-            label_tensor = torch.tensor([label], dtype=torch.float32) # Label sous forme de float
+            label_tensor = torch.tensor([label], dtype=torch.float32)
 
         return img_tensor, max_tensor, label_tensor
 
+
+
     def _convert_label_to_class(self, label):
-        """Convertit un label en classe en fonction du nombre de classes définies."""
-
-        # Définition des intervalles pour chaque classe
         bins = np.linspace(self.min_label, self.max_label, self.nb_classes + 1)
-        
-        # Attribution d'une classe en fonction des intervalles
-        label_class = np.digitize(label, bins, right=True) - 1  # -1 pour avoir un index de classe commençant à 0
-
-        # S'assurer que la classe est bien entre 0 et NB_CLASSES - 1
+        label_class = np.digitize(label, bins, right=True) - 1
         label_class = max(min(label_class, self.nb_classes - 1), 0)
-
         return label_class
+
     
 def plot_learning_curves(train_losses, val_losses, title="Learning Curves"):
     """Plot the learning curves of a training session."""
