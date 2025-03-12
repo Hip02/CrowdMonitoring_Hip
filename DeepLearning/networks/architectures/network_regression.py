@@ -39,19 +39,19 @@ class DopplerResNetRegression(nn.Module):
         super(DopplerResNetRegression, self).__init__()
         self.inplanes = param["MODEL"]["NB_CHANNELS"]
         self.conv1 = nn.Sequential(
-            nn.Conv2d(1, self.inplanes, kernel_size=7, stride=2, padding=3),  # 1 canal en entrée
-            nn.BatchNorm2d(self.inplanes),
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),  # 1 canal en entrée
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
         )
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # ↓ taille x4 ici
-        self.layer0 = self._make_layer(block, self.inplanes, layers[0], stride=1)
-        self.layer1 = self._make_layer(block, 2*self.inplanes, layers[1], stride=2)
-        self.layer2 = self._make_layer(block, 4*self.inplanes, layers[2], stride=2)
-        self.layer3 = self._make_layer(block, 8*self.inplanes, layers[3], stride=2)
+        self.layer0 = self._make_layer(block, 64, layers[0], stride=1)
+        self.layer1 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer2 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer3 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # peu importe la taille finale, ça fera [B,512,1,1]
 
         # ⚠️ On augmente la taille d'entrée du FC : 512 (features) + 1 (max_doppler)
-        self.fc = nn.Linear(8*self.inplanes + 1, 1)  # régression → une seule sortie
+        self.fc = nn.Linear(512 + 1, 1)  # régression → une seule sortie
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
