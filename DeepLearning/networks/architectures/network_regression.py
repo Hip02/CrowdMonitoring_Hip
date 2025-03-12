@@ -8,10 +8,83 @@ import torch.nn.functional as F
 #                                                                            #
 ##############################################################################
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1, downsample=None):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels)
+        )
+        self.downsample = downsample
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = self.conv2(out)
+        if self.downsample:
+            residual = self.downsample(x)
+        out += residual
+        out = self.relu(out)
+        return out
+
+class DopplerResNetRegression(nn.Module):
+    def __init__(self, param, layers, block=ResidualBlock):
+        super(DopplerResNetRegression, self).__init__()
+        self.inplanes = param["MODEL"]["NB_CHANNELS"]
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),  # 1 canal en entrée
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True)
+        )
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # ↓ taille x4 ici
+        self.layer0 = self._make_layer(block, 64, layers[0], stride=1)
+        self.layer1 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer2 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer3 = self._make_layer(block, 512, layers[3], stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # peu importe la taille finale, ça fera [B,512,1,1]
+
+        # ⚠️ On augmente la taille d'entrée du FC : 512 (features) + 1 (max_doppler)
+        self.fc = nn.Linear(512 + 1, 1)  # régression → une seule sortie
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes, kernel_size=1, stride=stride),
+                nn.BatchNorm2d(planes)
+            )
+        layers = [block(self.inplanes, planes, stride, downsample)]
+        self.inplanes = planes
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+        return nn.Sequential(*layers)
+
+    def forward(self, x, max_doppler):
+        x = self.conv1(x)       # → [B, 64, 256, 256]
+        x = self.maxpool(x)     # → [B, 64, 128, 128]
+        x = self.layer0(x)      # → reste identique
+        x = self.layer1(x)      # → stride=2 → ↓ taille
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.avgpool(x)     # → [B, 512, 1, 1]
+        x = torch.flatten(x, 1) # → [B, 512]
+
+        if len(max_doppler.shape) == 1:
+            max_doppler = max_doppler.unsqueeze(1)  # [B, 1]
+
+        x = torch.cat([x, max_doppler], dim=1)  # [B, 513]
+        
+        x = self.fc(x)          # → [B, 1]
+        return x
+
+""""
 #### REG_5 ####
 class DopplerNetRegressionTemporal(nn.Module):
     def __init__(self, param):
@@ -54,6 +127,8 @@ class DopplerNetRegressionTemporal(nn.Module):
         output = self.fc2(x)
 
         return output
+"""
+
 
 #### REG_4 ####
 """
