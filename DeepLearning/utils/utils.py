@@ -367,6 +367,7 @@ class DopplerDataset(Dataset):
         labels = self.data_loader.get_labels(exp_name)
         label = labels[image_index]
         if self.predictionType == "classification":
+            print("classif")
             label = self._convert_label_to_class(label)
             label_tensor = torch.tensor(label, dtype=torch.long)
         else:

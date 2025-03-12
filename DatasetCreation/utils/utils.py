@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ultralytics import YOLO
 from ultralytics.solutions import object_counter
 from PIL import Image
+import tifffile
 import os
 import cv2
 
@@ -135,7 +136,7 @@ def process_radar_file(input_radar_raw_filename, indexFrameProcess=None, saveMag
             - timestamps: timestamps of the radar maps
         )
     """
-    indexFrameProcess = np.arange(0,10)
+    indexFrameProcess = np.arange(0,10) # None
     rsData = fmcwProcess(input_radar_raw_filename, osFactor, indexFrameProcess=indexFrameProcess, clrRF=clrRF, disp=True)
 
     print(rsData['info'])
@@ -178,6 +179,7 @@ def save_radar_maps(radar_map, number, label, output_folder):
         Save the radar map in the output folder as "map_i.png"
     """
 
+    """
     # Ensure output directory exists
     os.makedirs(output_folder, exist_ok=True)
 
@@ -191,6 +193,16 @@ def save_radar_maps(radar_map, number, label, output_folder):
     # Save image without compression
     filename = os.path.join(output_folder, f"map_{number}_{label}.png")
     image.save(filename, format="PNG", compress_level=0)
+    """
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Save to .npy
+    filename = os.path.join(output_folder, f"map_{number}_{label}.npy")
+    np.save(filename, radar_map)
+
+    #filename = os.path.join(output_folder, f"map_{number}_{label}.tiff")
+    #tifffile.imwrite(filename, radar_map.astype(np.float32))
+
 
 def save_radar_max_values(max_values, timestamps, output_folder):
     """
