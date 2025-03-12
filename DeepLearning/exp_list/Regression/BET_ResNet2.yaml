@@ -7,11 +7,11 @@ DATASET:
 MODEL:
   # A parameter to control model complexity 
   # (i.e. number of trainable parameters)
-  NB_CHANNELS: 64
-  
+  NB_CHANNELS: 128
+
 TRAINING: 
-  PREDICTION_TYPE: regression_temporal
-  LEARNING_RATE: 0.00001
+  PREDICTION_TYPE: regression
+  LEARNING_RATE: 0.0000025
   EPOCH: 40
   BATCH_SIZE: 16
   # cpu (to run on cpu) or cuda (to run on gpu)

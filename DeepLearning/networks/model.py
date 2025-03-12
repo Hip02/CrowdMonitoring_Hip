@@ -32,7 +32,7 @@ class Network_Class:
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
         if self.predictionType == "regression":
-            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
+            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2, 2, 2]).to(self.device)
             self.criterion = nn.MSELoss()
         if self.predictionType == "regression_temporal":
             self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
