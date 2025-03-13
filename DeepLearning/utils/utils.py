@@ -274,6 +274,7 @@ class DopplerDataset(Dataset):
         # Nouveau paramètre
         self.use_prev_frames = param["MODEL"].get("USE_PREV_FRAMES", False)
         self.nb_prev_frames = param["MODEL"].get("NB_PREV_FRAMES", 0)
+        self.time_steps = param["MODEL"].get("TIME_STEPS", 1)
 
         self.data_indices = self._create_file_indices()
 
@@ -299,8 +300,8 @@ class DopplerDataset(Dataset):
         data_indices = []
         for exp in self.exp_list:
             num_images = len(self.data_loader.data["magnitudes"][exp])
-            # Commencer à nb_prev_frames pour que toutes les frames précédentes soient disponibles
-            for i in range(self.nb_prev_frames, num_images, self.sub_sample_factor):
+            # Commencer à nb_prev_frames * time_steps pour que toutes les frames précédentes soient disponibles
+            for i in range(self.nb_prev_frames * self.time_steps, num_images, self.sub_sample_factor):
                 data_indices.append((exp, i))  # i = frame cible
         return np.array(data_indices)
 
@@ -338,7 +339,7 @@ class DopplerDataset(Dataset):
         if self.use_prev_frames:
             sequence = []
             max_sequence = []
-            for i in range(image_index - self.nb_prev_frames, image_index + 1):  # <-- inclut frame cible !
+            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):  # <-- inclut frame cible !
                 img = self.data_loader.get_magnitude(exp_name, i)
                 if img is None:
                     raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")

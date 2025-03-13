@@ -10,80 +10,112 @@ import torch.nn.functional as F
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, downsample=None):
+    def __init__(self, in_channels, out_channels, stride=1, downsample=None, dilation=1):
         super(ResidualBlock, self).__init__()
+        padding = dilation
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=padding, dilation=dilation),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=padding, dilation=dilation),
             nn.BatchNorm2d(out_channels)
         )
         self.downsample = downsample
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        residual = x
+        identity = x
         out = self.conv1(x)
         out = self.conv2(out)
         if self.downsample:
-            residual = self.downsample(x)
-        out += residual
-        out = self.relu(out)
-        return out
+            identity = self.downsample(x)
+        out += identity
+        return self.relu(out)
 
 class DopplerResNetRegression(nn.Module):
     def __init__(self, param, layers, block=ResidualBlock):
         super(DopplerResNetRegression, self).__init__()
-        self.inplanes = param["MODEL"]["NB_CHANNELS"]
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),  # 1 canal en entrée
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True)
-        )
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # ↓ taille x4 ici
-        self.layer0 = self._make_layer(block, 64, layers[0], stride=1)
-        self.layer1 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer2 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3 = self._make_layer(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # peu importe la taille finale, ça fera [B,512,1,1]
+        nb_input_frames = param["MODEL"].get("NB_PREV_FRAMES", 0) + 1
+        out_channels_conv1 = param["MODEL"]["NB_CHANNELS"]
+        self.use_atrous_conv1 = param["MODEL"].get("USE_ATROUS_CONV1", False)
+        self.atrous_dilation_conv1 = param["MODEL"].get("ATROUS_DILATION_CONV1", 2)
+        self.use_dilation = param["MODEL"].get("USE_DILATION", False)
+        self.dilation = 2 if self.use_dilation else 1
 
-        # ⚠️ On augmente la taille d'entrée du FC : 512 (features) + 1 (max_doppler)
-        self.fc = nn.Linear(512 + 1, 1)  # régression → une seule sortie
+        # Conv1: standard + atrous (optionnel)
+        if self.use_atrous_conv1:
+            self.conv1_std = nn.Sequential(
+                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=7, stride=2, padding=3),
+                nn.BatchNorm2d(out_channels_conv1),
+                nn.ReLU(inplace=True)
+            )
+            self.conv1_dilated = nn.Sequential(
+                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=3, stride=2,
+                          padding=self.atrous_dilation_conv1, dilation=self.atrous_dilation_conv1),
+                nn.BatchNorm2d(out_channels_conv1),
+                nn.ReLU(inplace=True)
+            )
+            conv1_out_channels = 2 * out_channels_conv1
+        else:
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=7, stride=2, padding=3),
+                nn.BatchNorm2d(out_channels_conv1),
+                nn.ReLU(inplace=True)
+            )
+            conv1_out_channels = out_channels_conv1
 
-    def _make_layer(self, block, planes, blocks, stride=1):
+        self.inplanes = conv1_out_channels
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        # Layers (avec dilation uniforme si activée)
+        self.layer0 = self._make_layer(block, 64, layers[0], stride=1, dilation=self.dilation)
+        self.layer1 = self._make_layer(block, 128, layers[1], stride=2, dilation=self.dilation)
+        self.layer2 = self._make_layer(block, 256, layers[2], stride=2, dilation=self.dilation)
+        self.layer3 = self._make_layer(block, 512, layers[3], stride=2, dilation=self.dilation)
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 + nb_input_frames, 1)
+
+    def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
         downsample = None
+        first_dilation = dilation if stride == 1 else 1
+
         if stride != 1 or self.inplanes != planes:
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes, kernel_size=1, stride=stride),
                 nn.BatchNorm2d(planes)
             )
-        layers = [block(self.inplanes, planes, stride, downsample)]
+
+        layers = [block(self.inplanes, planes, stride, downsample, dilation=first_dilation)]
         self.inplanes = planes
+
         for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
+            layers.append(block(self.inplanes, planes, dilation=dilation))
+
         return nn.Sequential(*layers)
 
     def forward(self, x, max_doppler):
-        x = self.conv1(x)       # → [B, 64, 256, 256]
-        x = self.maxpool(x)     # → [B, 64, 128, 128]
-        x = self.layer0(x)      # → reste identique
-        x = self.layer1(x)      # → stride=2 → ↓ taille
+        if self.use_atrous_conv1:
+            x_std = self.conv1_std(x)
+            x_dil = self.conv1_dilated(x)
+            x = torch.cat([x_std, x_dil], dim=1)
+        else:
+            x = self.conv1(x)
+
+        x = self.maxpool(x)
+        x = self.layer0(x)
+        x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.avgpool(x)     # → [B, 512, 1, 1]
-        x = torch.flatten(x, 1) # → [B, 512]
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
 
         if len(max_doppler.shape) == 1:
-            max_doppler = max_doppler.unsqueeze(1)  # [B, 1]
-
-        x = torch.cat([x, max_doppler], dim=1)  # [B, 513]
-        
-        x = self.fc(x)          # → [B, 1]
-        return x
-
+            max_doppler = max_doppler.unsqueeze(1)
+        x = torch.cat([x, max_doppler], dim=1)
+        return self.fc(x)
 """"
 #### REG_5 ####
 class DopplerNetRegressionTemporal(nn.Module):

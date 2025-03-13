@@ -8,6 +8,9 @@ MODEL:
   # A parameter to control model complexity 
   # (i.e. number of trainable parameters)
   NB_CHANNELS: 64
+  USE_PREV_FRAMES: True
+  NB_PREV_FRAMES: 4
+  TIME_STEPS : 2
   
 TRAINING: 
   PREDICTION_TYPE: regression

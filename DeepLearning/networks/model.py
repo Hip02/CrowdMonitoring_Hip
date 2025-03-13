@@ -8,6 +8,7 @@ import copy
 from networks.architectures.network_classification import DopplerNetClassification
 from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression
 from utils.utils import DopplerDataset
+import seaborn as sns
 
 import torch
 from torch.utils.data import DataLoader
@@ -31,10 +32,7 @@ class Network_Class:
         if self.predictionType == "classification":
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
-        if self.predictionType == "regression":
-            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2, 2, 2]).to(self.device)
-            self.criterion = nn.MSELoss()
-        if self.predictionType == "regression_temporal":
+        if self.predictionType == "regression" or self.predictionType == "regression_temporal":
             self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
             self.criterion = nn.MSELoss()
 
@@ -168,13 +166,30 @@ class Network_Class:
 
             # 📈 Scatter plot: predictions vs true labels
             plt.figure(figsize=(8, 6))
-            plt.scatter(all_labels, all_preds, alpha=0.6)
+            plt.scatter(all_labels, all_preds, alpha=0.1)
             plt.plot([min(all_labels), max(all_labels)], [min(all_labels), max(all_labels)], 'r--', label='Perfect prediction')
             plt.xlabel('True labels')
             plt.ylabel('Predicted labels')
             plt.title('Regression: Predictions vs True Labels')
             plt.legend()
             plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
+            # Ajout 1 : arrondi à l'entier le plus proche
+            rounded_preds = np.round(all_preds).astype(int)
+            all_labels = np.round(all_labels).astype(int)
+
+            # Ajout 2 : génération et affichage de la matrice de confusion
+            labels = list(range(min(all_labels), max(all_labels) + 1))
+
+            cm = confusion_matrix(all_labels, rounded_preds, labels=labels)
+            plt.figure(figsize=(12, 10))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', mask=(cm==0), cbar=True)
+            plt.gca().invert_yaxis()
+            plt.title('Confusion Matrix (Rounded Predictions)')
+            plt.xlabel('Predicted label')
+            plt.ylabel('True label')
             plt.tight_layout()
             plt.show()
 

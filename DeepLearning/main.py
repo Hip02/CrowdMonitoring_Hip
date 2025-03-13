@@ -15,7 +15,7 @@ args = parser.parse_args()
 base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
-l_exp = ["Regression/BET_ResNet1", "Regression/BET_ResNet2"]
+l_exp = ["Regression/BET_ResNet3", "Regression/BET_ResNet4"]
 
 # Get experiment path from index
 try:
