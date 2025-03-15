@@ -401,8 +401,9 @@ class DopplerDataset(Dataset):
                     lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
                 ]
                 img_tensor = torch.cat([aug(base_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, T, H, W)
+                img_tensor = img_tensor.view(-1, base_tensor.shape[2], base_tensor.shape[3])  # (N_TRANSFORMS * T, H, W)
             else:
-                img_tensor = base_tensor  # (1, T, H, W)
+                img_tensor = base_tensor.view(-1, base_tensor.shape[2], base_tensor.shape[3])  # (T, H, W)
 
         else:
             img = self.data_loader.get_magnitude(exp_name, image_index)
@@ -422,7 +423,7 @@ class DopplerDataset(Dataset):
                     lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
                     lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
                 ]
-                img_tensor = torch.cat([aug(img_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, H, W)
+                img_tensor = torch.stack([aug(img_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, H, W)
             else:
                 img_tensor = img_tensor.squeeze(0)  # (H, W)
 
