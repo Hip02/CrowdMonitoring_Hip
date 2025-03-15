@@ -389,7 +389,8 @@ class DopplerDataset(Dataset):
                 max_value = max_val[i] if i < len(max_val) else 0.0
                 max_sequence.append(max_value)
 
-            base_tensor = torch.stack(sequence, dim=1)  # (1, T, H, W)
+            base_tensor = torch.stack(sequence, dim=0)  # (T, 1, H, W)
+            base_tensor = base_tensor.permute(1, 0, 2, 3)  # (1, T, H, W)
             max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (T,)
 
             if self.mode == "train" and self.data_augm:
