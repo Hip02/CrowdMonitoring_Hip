@@ -9,7 +9,7 @@ local_destination = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip/
 # ---------------------
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
-subfolder = "Regression/BET_ResNet2"#input("Entrez le nom du sous-dossier à transférer depuis 'results/': ").strip()
+subfolder = "Regression/BET_ResNet3"#input("Entrez le nom du sous-dossier à transférer depuis 'results/': ").strip()
 remote_path = os.path.join(remote_base_path, subfolder)
 
 # --- Construction de la commande SCP ---

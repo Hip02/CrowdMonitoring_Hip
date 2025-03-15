@@ -285,7 +285,7 @@ class DopplerDataset(Dataset):
             self.mean_label, self.std_label = self._compute_label_stats()
 
         # Split des données
-        self.train_indices, self.val_indices, self.test_indices = self._split_dataset(shuffle, random_seed)
+        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
 
         if self.mode == "train":
             self.data_indices = self.train_indices
@@ -305,6 +305,40 @@ class DopplerDataset(Dataset):
                 data_indices.append((exp, i))  # i = frame cible
         return np.array(data_indices)
 
+    def _split_dataset_by_blocks(self):
+        train_indices, val_indices, test_indices = [], [], []
+        for exp in self.exp_list:
+            num_frames = len(self.data_loader.data["magnitudes"][exp])
+            start_index = self.nb_prev_frames * self.time_steps
+            usable_frames = list(range(start_index, num_frames, self.sub_sample_factor))
+
+            block_size = self.temporal_block_size
+            train_size = int(block_size * self.train_split)
+            val_size = (block_size - train_size) // 2
+            test_size = block_size - train_size - val_size
+
+            i = 0
+            while i < len(usable_frames):
+                remaining = len(usable_frames) - i
+                current_block_size = min(block_size, remaining)
+
+                current_train_size = int(current_block_size * self.train_split)
+                current_val_size = (current_block_size - current_train_size) // 2
+                current_test_size = current_block_size - current_train_size - current_val_size
+
+                block = usable_frames[i:i + current_block_size]
+                block_train = block[:current_train_size]
+                block_val = block[current_train_size:current_train_size + current_val_size]
+                block_test = block[current_train_size + current_val_size:]
+
+                train_indices += [(exp, idx) for idx in block_train]
+                val_indices += [(exp, idx) for idx in block_val]
+                test_indices += [(exp, idx) for idx in block_test]
+
+                i += current_block_size
+
+        return np.array(train_indices), np.array(val_indices), np.array(test_indices)
+    """
     def _split_dataset(self, shuffle, random_seed):
         np.random.seed(random_seed)
         indices = np.arange(len(self.data_indices))
@@ -320,7 +354,7 @@ class DopplerDataset(Dataset):
         test_indices = indices[train_size + val_size:]
 
         return self.data_indices[train_indices], self.data_indices[val_indices], self.data_indices[test_indices]
-
+    """
     def _compute_label_range(self):
         all_labels = self.data_loader.get_labels()
         return min(all_labels), max(all_labels)
@@ -376,8 +410,6 @@ class DopplerDataset(Dataset):
             label_tensor = torch.tensor([label], dtype=torch.float32)
 
         return img_tensor, max_tensor, label_tensor
-
-
 
     def _convert_label_to_class(self, label):
         bins = np.linspace(self.min_label, self.max_label, self.nb_classes + 1)
