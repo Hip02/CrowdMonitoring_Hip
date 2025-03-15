@@ -58,6 +58,10 @@ sys.stderr = sys.stdout
 data_loader = DataLoader(base_path, exp_list=all)
 myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
+print(f"{len(myNetwork.dataSetTrain)} samples in training set")
+print(f"{len(myNetwork.dataSetTest)} samples in test set")
+print(f"{len(myNetwork.dataSetVal)} samples in validation set")
+
 train_losses, val_losses = myNetwork.train()
 
 # Save results

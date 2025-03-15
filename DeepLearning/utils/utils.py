@@ -262,7 +262,8 @@ class DopplerDataset(Dataset):
     def __init__(self, data_loader, mode="train", param=None, shuffle=True, random_seed=42, sub_sample_factor=1):
         super(DopplerDataset, self).__init__()
         self.mode = mode.lower()
-        self.train_split = param["DATASET"]["TRAIN_SPLIT"]
+        self.train_split = param["DATASET"].get("TRAIN_SPLIT", 0.8)
+        self.temporal_block_size = param["DATASET"].get("TEMPORAL_BLOCK_SIZE", 200)
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         if self.predictionType == "classification":
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
