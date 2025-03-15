@@ -10,6 +10,7 @@ from tqdm import tqdm
 import cv2
 import torch
 from torch.utils.data import Dataset
+import torchvision.transforms as T
 from sklearn.model_selection import train_test_split
 
 
@@ -265,6 +266,7 @@ class DopplerDataset(Dataset):
         self.train_split = param["DATASET"].get("TRAIN_SPLIT", 0.8)
         self.temporal_block_size = param["DATASET"].get("TEMPORAL_BLOCK_SIZE", 200)
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
+        self.data_augm = param["TRAINING"].get("DATA_AUGMENTATION", False)
         if self.predictionType == "classification":
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
 
@@ -374,20 +376,34 @@ class DopplerDataset(Dataset):
         if self.use_prev_frames:
             sequence = []
             max_sequence = []
-            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):  # <-- inclut frame cible !
+
+            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):
                 img = self.data_loader.get_magnitude(exp_name, i)
                 if img is None:
                     raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")
                 img = img.astype(np.float32) / 255.0
-                sequence.append(img[..., 0])  # (H, W)
+                img_tensor = torch.tensor(img[..., 0], dtype=torch.float32)  # (H, W)
+                sequence.append(img_tensor)
 
                 max_val = self.data_loader.get_max_values(exp_name)
                 max_value = max_val[i] if i < len(max_val) else 0.0
                 max_sequence.append(max_value)
 
-            img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (nb_prev_frames+1, H, W)
-            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (nb_prev_frames+1,)
-        
+            base_tensor = torch.stack(sequence, dim=0)  # (T, H, W)
+            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (T,)
+
+            if self.mode == "train" and self.data_augm:
+                # Appliquer N_TRANSFORMS et créer un batch artificiel
+                aug_transforms = [
+                    lambda x: T.functional.vflip(x),
+                    lambda x: T.functional.hflip(T.functional.vflip(x)),
+                    lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
+                    lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
+                ]
+                img_tensor = torch.stack([aug(base_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, T, H, W)
+            else:
+                img_tensor = base_tensor.unsqueeze(0)  # (1, T, H, W)
+
         else:
             img = self.data_loader.get_magnitude(exp_name, image_index)
             if img is None:
@@ -399,11 +415,21 @@ class DopplerDataset(Dataset):
             max_value = max_val[image_index] if image_index < len(max_val) else 0.0
             max_tensor = torch.tensor([max_value], dtype=torch.float32)
 
+            if self.mode == "train" and self.data_augm:
+                aug_transforms = [
+                    lambda x: T.functional.vflip(x),
+                    lambda x: T.functional.hflip(T.functional.vflip(x)),
+                    lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
+                    lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
+                ]
+                img_tensor = torch.stack([aug(img_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, 1, H, W)
+            else:
+                img_tensor = img_tensor.unsqueeze(0)  # (1, 1, H, W)
+
         # Label
         labels = self.data_loader.get_labels(exp_name)
         label = labels[image_index]
         if self.predictionType == "classification":
-            print("classif")
             label = self._convert_label_to_class(label)
             label_tensor = torch.tensor(label, dtype=torch.long)
         else:

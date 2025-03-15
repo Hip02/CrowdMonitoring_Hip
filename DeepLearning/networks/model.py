@@ -33,8 +33,8 @@ class Network_Class:
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
         if self.predictionType == "regression" or self.predictionType == "regression_temporal":
-            self.model = DopplerResNet50Regression(param).to(self.device)
-            #self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
+            #self.model = DopplerResNet50Regression(param).to(self.device)
+            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
             self.criterion = nn.MSELoss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
