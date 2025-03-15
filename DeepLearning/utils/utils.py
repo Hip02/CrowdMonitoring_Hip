@@ -382,14 +382,14 @@ class DopplerDataset(Dataset):
                 if img is None:
                     raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")
                 img = img.astype(np.float32) / 255.0
-                img_tensor = torch.tensor(img[..., 0], dtype=torch.float32)  # (H, W)
+                img_tensor = torch.tensor(img[..., 0], dtype=torch.float32).unsqueeze(0)  # (1, H, W)
                 sequence.append(img_tensor)
 
                 max_val = self.data_loader.get_max_values(exp_name)
                 max_value = max_val[i] if i < len(max_val) else 0.0
                 max_sequence.append(max_value)
 
-            base_tensor = torch.stack(sequence, dim=0)  # (T, H, W)
+            base_tensor = torch.stack(sequence, dim=1)  # (1, T, H, W)
             max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (T,)
 
             if self.mode == "train" and self.data_augm:
@@ -400,9 +400,9 @@ class DopplerDataset(Dataset):
                     lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
                     lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
                 ]
-                img_tensor = torch.stack([aug(base_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, T, H, W)
+                img_tensor = torch.cat([aug(base_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, T, H, W)
             else:
-                img_tensor = base_tensor.unsqueeze(0)  # (1, T, H, W)
+                img_tensor = base_tensor  # (1, T, H, W)
 
         else:
             img = self.data_loader.get_magnitude(exp_name, image_index)
@@ -422,7 +422,7 @@ class DopplerDataset(Dataset):
                     lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
                     lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
                 ]
-                img_tensor = torch.stack([aug(img_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, 1, H, W)
+                img_tensor = torch.cat([aug(img_tensor.clone()).unsqueeze(0) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, 1, H, W)
             else:
                 img_tensor = img_tensor.unsqueeze(0)  # (1, 1, H, W)
 
