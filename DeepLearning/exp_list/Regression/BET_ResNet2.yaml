@@ -13,7 +13,7 @@ TRAINING:
   PREDICTION_TYPE: regression
   DATA_AUGMENTATION : True
   LEARNING_RATE: 0.00001
-  EPOCH: 20
+  EPOCH: 15
   BATCH_SIZE: 16
   # cpu (to run on cpu) or cuda (to run on gpu)
   DEVICE: cuda 

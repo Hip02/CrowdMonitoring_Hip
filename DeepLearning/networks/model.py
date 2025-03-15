@@ -15,12 +15,13 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 import torch.nn as nn
 import torch.optim
+import torchvision.transforms.functional as TF
 
 def createFolder(desiredPath): 
     if not os.path.exists(desiredPath):
         os.makedirs(desiredPath)
 
-class Network_Class: 
+class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
         self.resultsPath    = resultsPath
         self.epoch          = param["TRAINING"]["EPOCH"]
@@ -28,12 +29,12 @@ class Network_Class:
         self.lr             = param["TRAINING"]["LEARNING_RATE"]
         self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
+        self.data_augm      = param["TRAINING"].get("DATA_AUGMENTATION", False)
 
         if self.predictionType == "classification":
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
         if self.predictionType == "regression" or self.predictionType == "regression_temporal":
-            #self.model = DopplerResNet50Regression(param).to(self.device)
             self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
             self.criterion = nn.MSELoss()
 
@@ -43,7 +44,7 @@ class Network_Class:
         self.dataSetVal = DopplerDataset(data_loader, mode='val', param=param, sub_sample_factor=sub_sample_factor)
         self.dataSetTest = DopplerDataset(data_loader, mode='test', param=param, sub_sample_factor=sub_sample_factor)
 
-        self.trainDataLoader = DataLoader(self.dataSetTrain, batch_size=self.batchSize, shuffle=True,  num_workers=4)
+        self.trainDataLoader = DataLoader(self.dataSetTrain, batch_size=self.batchSize, shuffle=True, num_workers=4)
         self.valDataLoader = DataLoader(self.dataSetVal, batch_size=self.batchSize, shuffle=False, num_workers=4)
         self.testDataLoader = DataLoader(self.dataSetTest, batch_size=self.batchSize, shuffle=False, num_workers=4)
 
@@ -52,6 +53,14 @@ class Network_Class:
     def loadWeight(self):
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
+    def apply_data_augmentation(self, x):
+        transforms = [
+            lambda img: TF.vflip(img),
+            lambda img: TF.hflip(TF.vflip(img)),
+            lambda img: TF.adjust_brightness(TF.vflip(img), brightness_factor=1.3),
+            lambda img: TF.adjust_contrast(TF.vflip(img), contrast_factor=1.5),
+        ]
+        return [transform(x.clone()) for transform in transforms]
 
     def train(self):
         best_loss = np.Inf
@@ -63,26 +72,43 @@ class Network_Class:
             train_loss = 0.0
             total_train_samples = 0
 
-            progress_bar = tqdm(self.trainDataLoader, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
+            # Compute total steps for progress bar (base + augmented)
+            aug_factor = 1 + (4 if self.data_augm else 0)
+            total_steps = len(self.trainDataLoader) * aug_factor
+            progress_bar = tqdm(total=total_steps, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
 
-            for image_magnitude, max_doppler, labels in progress_bar:
+            for image_magnitude, max_doppler, labels in self.trainDataLoader:
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
+                labels = labels.to(self.device)
 
-                if self.predictionType == "regression" or self.predictionType == "regression_temporal":
+                if self.predictionType in ["regression", "regression_temporal"]:
                     labels = labels.view(-1, 1)
 
-                labels = labels.to(self.device)
+                # Base training pass
                 self.optimizer.zero_grad()
-
                 outputs = self.model(image_magnitude, max_doppler)
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
 
-                batch_size = labels.size(0)
-                train_loss += loss.item() * batch_size  # somme des pertes
-                total_train_samples += batch_size
+                train_loss += loss.item() * labels.size(0)
+                total_train_samples += labels.size(0)
+                progress_bar.update(1)
+
+                # Additional augmentation passes
+                if self.data_augm:
+                    aug_batches = self.apply_data_augmentation(image_magnitude)
+                    for aug_img in aug_batches:
+                        self.optimizer.zero_grad()
+                        outputs = self.model(aug_img.to(self.device), max_doppler)
+                        loss_aug = self.criterion(outputs, labels)
+                        loss_aug.backward()
+                        self.optimizer.step()
+
+                        train_loss += loss_aug.item() * labels.size(0)
+                        total_train_samples += labels.size(0)
+                        progress_bar.update(1)
 
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
@@ -98,17 +124,15 @@ class Network_Class:
                 for image_magnitude, max_doppler, labels in self.valDataLoader:
                     image_magnitude = image_magnitude.to(self.device)
                     max_doppler = max_doppler.to(self.device)
+                    labels = labels.to(self.device)
 
-                    if self.predictionType == "regression" or self.predictionType == "regression_temporal":
+                    if self.predictionType in ["regression", "regression_temporal"]:
                         labels = labels.view(-1, 1)
 
-                    labels = labels.to(self.device)
                     outputs = self.model(image_magnitude, max_doppler)
                     loss = self.criterion(outputs, labels)
-
-                    batch_size = labels.size(0)
-                    val_loss += loss.item() * batch_size
-                    total_val_samples += batch_size
+                    val_loss += loss.item() * labels.size(0)
+                    total_val_samples += labels.size(0)
 
             mean_val_loss = val_loss / total_val_samples
             val_losses.append(mean_val_loss)
