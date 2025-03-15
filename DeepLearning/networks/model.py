@@ -39,7 +39,7 @@ class Network_Class:
             self.criterion = nn.MSELoss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        if param["TRAINING"].get(["SCHEDULER"], False) : self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=param["TRAINING"].get("LR_STEP", 10), gamma=param["TRAINING"].get("LR_GAMMA", 0.1))
+        if param["TRAINING"].get("SCHEDULER", False) : self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=param["TRAINING"].get("LR_STEP", 10), gamma=param["TRAINING"].get("LR_GAMMA", 0.1))
 
 
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
