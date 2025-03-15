@@ -394,7 +394,6 @@ class DopplerDataset(Dataset):
             max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (T,)
 
             if self.mode == "train" and self.data_augm:
-                # Appliquer N_TRANSFORMS et créer un batch artificiel
                 aug_transforms = [
                     lambda x: T.functional.vflip(x),
                     lambda x: T.functional.hflip(T.functional.vflip(x)),
@@ -423,9 +422,9 @@ class DopplerDataset(Dataset):
                     lambda x: T.functional.adjust_brightness(T.functional.vflip(x), brightness_factor=1.3),
                     lambda x: T.functional.adjust_contrast(T.functional.vflip(x), contrast_factor=1.5),
                 ]
-                img_tensor = torch.cat([aug(img_tensor.clone()).unsqueeze(0) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, 1, H, W)
+                img_tensor = torch.cat([aug(img_tensor.clone()) for aug in aug_transforms], dim=0)  # (N_TRANSFORMS, H, W)
             else:
-                img_tensor = img_tensor.unsqueeze(0)  # (1, 1, H, W)
+                img_tensor = img_tensor.squeeze(0)  # (H, W)
 
         # Label
         labels = self.data_loader.get_labels(exp_name)
@@ -438,12 +437,6 @@ class DopplerDataset(Dataset):
             label_tensor = torch.tensor([label], dtype=torch.float32)
 
         return img_tensor, max_tensor, label_tensor
-
-    def _convert_label_to_class(self, label):
-        bins = np.linspace(self.min_label, self.max_label, self.nb_classes + 1)
-        label_class = np.digitize(label, bins, right=True) - 1
-        label_class = max(min(label_class, self.nb_classes - 1), 0)
-        return label_class
 
     
 def plot_learning_curves(train_losses, val_losses, title="Learning Curves"):
