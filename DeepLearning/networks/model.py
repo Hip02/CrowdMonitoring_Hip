@@ -6,7 +6,7 @@ import os
 import copy
 
 from networks.architectures.network_classification import DopplerNetClassification
-from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression
+from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
 from utils.utils import DopplerDataset
 import seaborn as sns
 
@@ -33,7 +33,8 @@ class Network_Class:
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
         if self.predictionType == "regression" or self.predictionType == "regression_temporal":
-            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
+            self.model = DopplerResNet50Regression(param).to(self.device)
+            #self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
             self.criterion = nn.MSELoss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)

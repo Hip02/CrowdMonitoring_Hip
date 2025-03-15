@@ -9,22 +9,25 @@ local_destination = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip/
 # ---------------------
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
-subfolder = "Regression/BET_ResNet3"#input("Entrez le nom du sous-dossier à transférer depuis 'results/': ").strip()
-remote_path = os.path.join(remote_base_path, subfolder)
+subfolders = ["Regression/BET_ResNet2", "Regression/BET_ResNet4"]
 
-# --- Construction de la commande SCP ---
-scp_command = [
-    "scp",
-    "-r",  # option récursive
-    f"{remote_user}@{remote_host}:{remote_path}",
-    local_destination
-]
+for subfolder in subfolders :
 
-# --- Affichage et exécution de la commande ---
-print(f"\nTransfert de {remote_path} vers {local_destination}...\n")
-try:
-    subprocess.run(scp_command, check=True)
-    print("\n✅ Transfert terminé avec succès.")
-except subprocess.CalledProcessError as e:
-    print("\n❌ Une erreur est survenue pendant le transfert.")
-    print("Détail de l'erreur :", e)
+    remote_path = os.path.join(remote_base_path, subfolder)
+
+    # --- Construction de la commande SCP ---
+    scp_command = [
+        "scp",
+        "-r",  # option récursive
+        f"{remote_user}@{remote_host}:{remote_path}",
+        local_destination
+    ]
+
+    # --- Affichage et exécution de la commande ---
+    print(f"\nTransfert de {remote_path} vers {local_destination}...\n")
+    try:
+        subprocess.run(scp_command, check=True)
+        print("\n✅ Transfert terminé avec succès.")
+    except subprocess.CalledProcessError as e:
+        print("\n❌ Une erreur est survenue pendant le transfert.")
+        print("Détail de l'erreur :", e)
