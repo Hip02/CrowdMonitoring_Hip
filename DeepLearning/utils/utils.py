@@ -312,12 +312,15 @@ class DopplerDataset(Dataset):
         for exp in self.exp_list:
             num_frames = len(self.data_loader.data["magnitudes"][exp])
             start_index = self.nb_prev_frames * self.time_steps
-            usable_frames = list(range(start_index, num_frames, self.sub_sample_factor))
+            usable_frames = list(range(0, num_frames, self.sub_sample_factor))
 
             block_size = self.temporal_block_size
             train_size = int(block_size * self.train_split)
             val_size = (block_size - train_size) // 2
             test_size = block_size - train_size - val_size
+
+            if val_size <= start_index or test_size <= start_index or train_size <= start_index:
+                raise ValueError("La taille des blocs est trop petite par rapport au nombre de frames précédentes.")
 
             i = 0
             while i < len(usable_frames):
@@ -329,9 +332,9 @@ class DopplerDataset(Dataset):
                 current_test_size = current_block_size - current_train_size - current_val_size
 
                 block = usable_frames[i:i + current_block_size]
-                block_train = block[:current_train_size]
-                block_val = block[current_train_size:current_train_size + current_val_size]
-                block_test = block[current_train_size + current_val_size:]
+                block_train = block[start_index:current_train_size]
+                block_val = block[current_train_size + start_index :current_train_size + current_val_size]
+                block_test = block[current_train_size + current_val_size + start_index :]
 
                 train_indices += [(exp, idx) for idx in block_train]
                 val_indices += [(exp, idx) for idx in block_val]

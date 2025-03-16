@@ -3,6 +3,7 @@ DATASET:
   # size of the images 
   RESIZE_SHAPE: 512x512
   TRAIN_SPLIT: 0.8
+  TEMPORAL_BLOCK_SIZE : 500
 
 MODEL:
   # A parameter to control model complexity 
