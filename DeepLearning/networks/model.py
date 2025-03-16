@@ -56,12 +56,26 @@ class Network_Class:
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
     def apply_data_augmentation(self, x):
+
+        def add_gaussian_noise(img, mean=0.0, std=0.01):
+            noise = torch.randn_like(img) * std + mean
+            return img + noise
+
+        transforms = [
+            lambda img: add_gaussian_noise(img),
+            lambda img: TF.hflip(img),
+            lambda img: TF.vflip(img),
+            lambda img: add_gaussian_noise(TF.hflip(img)),
+        ]
+
+        """
         transforms = [
             lambda img: TF.vflip(img),
             lambda img: TF.hflip(TF.vflip(img)),
             lambda img: TF.adjust_brightness(TF.vflip(img), brightness_factor=1.3),
             lambda img: TF.adjust_contrast(TF.vflip(img), contrast_factor=1.5),
         ]
+        """
         return [transform(x.clone()) for transform in transforms]
 
     def train(self):
@@ -289,9 +303,54 @@ class Network_Class:
             axes = [axes]  # Convertir en liste si une seule image
 
         for i in range(num_images):
+            denormalized_label = labels_to_show[i] * self.dataSetTrain.std_label + self.dataSetTrain.mean_label
             img = images_to_show[i, 0, :, :]  # Extraire l'image Doppler (1 canal)
             axes[i].imshow(img, cmap='gray')
-            axes[i].set_title(f"Label: {labels_to_show[i]}\nMax Doppler: {max_doppler_to_show[i][0]:.7f}")
+            axes[i].set_title(f"Label: {labels_to_show[i]} ({int(denormalized_label)})\nMax Doppler: {max_doppler_to_show[i][0]:.7f}")
             axes[i].axis("off")
 
+        plt.show()
+
+
+    def visualize_data_augmentation(self, num_images=4):
+        """
+        Affiche les images originales et leurs versions augmentées pour inspection visuelle.
+        
+        Args:
+            num_images (int): Nombre d’images à visualiser (maximum : batch size).
+        """
+        print("🎨 Visualizing Data Augmentation")
+
+        # Prendre un batch du DataLoader d'entraînement
+        image_magnitude, max_doppler, labels = next(iter(self.trainDataLoader))
+
+        # Ne pas dépasser la taille du batch
+        num_images = min(num_images, image_magnitude.shape[0])
+
+        # Appliquer les augmentations sur les premières images
+        images_to_show = image_magnitude[:num_images]
+        augm_lists = [self.apply_data_augmentation(img.unsqueeze(0))[0:4] for img in images_to_show]
+
+        # Convertir les originaux en numpy
+        originals = images_to_show.cpu().numpy()
+
+        # Figure : Original + 4 augmentations pour chaque image
+        fig, axes = plt.subplots(num_images, 5, figsize=(15, 3 * num_images))
+        if num_images == 1:
+            axes = [axes]  # Si une seule ligne
+
+        for i in range(num_images):
+            # Image originale
+            axes[i][0].imshow(originals[i][0], cmap='gray')
+            axes[i][0].set_title("Original")
+            axes[i][0].axis("off")
+
+            # Augmentations
+            for j in range(4):
+                aug_img = augm_lists[i][j][0].cpu().numpy()
+                axes[i][j + 1].imshow(aug_img.squeeze(), cmap='gray')
+                axes[i][j + 1].set_title(f"Augm {j+1}")
+                axes[i][j + 1].axis("off")
+
+        plt.tight_layout()
         plt.show()
