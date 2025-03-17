@@ -70,8 +70,9 @@ class DataLoader:
         self.base_path = base_path
         self.exp_list = exp_list if exp_list else self._discover_experiments()
         self.data = {
-            "min_values": {}, "max_values": {}, "labels": {}, 
-            "magnitudes": {}, "phases": {}, "magnitudes2": {}, "phases2": {}
+            "min_values": {}, "max_values": {}, "min_values2": {},
+            "max_values2" : {}, "labels": {}, "magnitudes": {},
+            "phases": {}, "magnitudes2": {}, "phases2": {}
         }
 
         # Chargement immédiat des données (sauf les cartes radar)
@@ -84,7 +85,7 @@ class DataLoader:
     def _load_data(self, to_load):
         """Charge certaines données immédiatement, sauf les images, avec barre de chargement."""
         if to_load is None:
-            to_load = ["max_values", "labels", "magnitudes", "magnitudes2"]
+            to_load = ["max_values", "max_values2","labels", "magnitudes", "magnitudes2"]
 
         # Utilisation de tqdm pour afficher une barre de progression
         for exp in tqdm(self.exp_list, desc="🔄 Chargement des données", unit="exp"):
@@ -92,6 +93,8 @@ class DataLoader:
                 self.data["min_values"][exp] = self._load_min_values(exp)
             if "max_values" in to_load: 
                 self.data["max_values"][exp] = self._load_max_values(exp)
+            if "max_values2" in to_load:
+                self.data["max_values2"][exp] = self._load_max_values(exp)
             if "labels" in to_load: 
                 self.data["labels"][exp] = self._load_labels(exp)
 
@@ -109,6 +112,11 @@ class DataLoader:
     def _load_max_values(self, exp_name):
         """Loads max values from a single file."""
         max_path = os.path.join(self.base_path, exp_name, "MaxValues", "max_values.npy")
+        return np.load(max_path) if os.path.exists(max_path) else np.array([])
+    
+    def _load_max_values2(self, exp_name):
+        """Loads max values from a single file."""
+        max_path = os.path.join(self.base_path, exp_name, "MaxValuesAntenna1", "max_values.npy")
         return np.load(max_path) if os.path.exists(max_path) else np.array([])
 
     def _load_labels(self, exp_name):
@@ -170,28 +178,6 @@ class DataLoader:
                     data.append(np.load(file_path))
         return np.concatenate(data) if data else np.array([])
 
-    def _load_image_files(self, directory):
-        """
-        Loads all .jpg and .jpeg video frames from a given directory into a NumPy array.
-        Frames are loaded in RGB format.
-
-        Args:
-            directory (str): Path to the folder containing video frames.
-
-        Returns:
-            np.ndarray: Array of video frames with shape (num_frames, height, width, 3) or empty array if none exist.
-        """
-        data = []
-        if os.path.exists(directory):
-            for file in sorted(os.listdir(directory)):
-                file_path = os.path.join(directory, file)
-                if file.endswith((".jpg", ".jpeg")):
-                    img = cv2.imread(file_path)  # Load in BGR format
-                    if img is not None:
-                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
-                        data.append(img)
-        return np.array(data) if data else np.array([])
-
     def _load_radar_maps(self, directory):
         """
         Loads all .png radar maps from a given directory into a NumPy array.
@@ -241,6 +227,10 @@ class DataLoader:
         """Retrieves max values, either for a specific experiment or combined."""
         return self.data["max_values"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["max_values"])
 
+    def get_max_values2(self, exp_name=None):
+        """Retrieves max values, either for a specific experiment or combined."""
+        return self.data["max_values2"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["max_values2"])
+
     def get_labels(self, exp_name=None):
         """Retrieves labels, either for a specific experiment or combined."""
         return self.data["labels"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["labels"])
@@ -260,28 +250,6 @@ class DataLoader:
     def get_phases2(self, exp_name=None):
         """Retrieves radar phases, either for a specific experiment or combined."""
         return self.data["phases2"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["phases2"])
-
-    def get_fft(self, exp_name=None):
-        """Retrieves FFT magnitudes, either for a specific experiment or combined."""
-        return self.data["fft"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["fft"])
-
-    def get_video_frames(self, exp_name=None):
-        """Retrieves video frames, either for a specific experiment or combined."""
-        return self.data["video_frames"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["video_frames"])
-
-    def get_feature(self, feature_name, exp_name=None):
-        """Retrieves specific feature (feature_name), either for a specific experiment or combined."""
-        if exp_name:
-            # Return the feature from a specific experiment
-            return self.data["features"].get(exp_name, {}).get(feature_name, np.array([]))
-
-        # Return the feature for all experiments as a dictionary {exp_name: feature_data}
-        all_features = {
-            exp: features.get(feature_name, np.array([]))
-            for exp, features in self.data["features"].items()
-        }
-        return self._get_combined_data(all_features)
-
 
 
 class DopplerDataset(Dataset):
@@ -312,6 +280,12 @@ class DopplerDataset(Dataset):
             self.min_label, self.max_label = self._compute_label_range()
         else:
             self.mean_label, self.std_label = self._compute_label_stats()
+
+        # Statistiques max_values et max_values2
+        self.mean_max_values = np.mean(self.data_loader.get_max_values())
+        self.std_max_values = np.std(self.data_loader.get_max_values())
+        self.mean_max_values2 = np.mean(self.data_loader.get_max_values2())
+        self.std_max_values2 = np.std(self.data_loader.get_max_values2())
 
         # Split des données
         self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
@@ -420,9 +394,13 @@ class DopplerDataset(Dataset):
                     img2 = img2.astype(np.float32) / 255.0
                     sequence.append(img2[..., 0])  # (H, W) pour antenne 2
 
-                max_val = self.data_loader.get_max_values(exp_name)
-                max_value = max_val[i] if i < len(max_val) else 0.0
-                max_sequence.append(max_value)
+                    max_val2 = self.data_loader.get_max_values2(exp_name)[i]
+                    max_val2_normalized = (max_val2 - self.mean_max_values2) / self.std_max_values2
+                    max_sequence.append(max_val2_normalized)
+
+                max_val = self.data_loader.get_max_values(exp_name)[i]
+                max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
+                max_sequence.append(max_val_normalized)
 
             img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (T, H, W) ou (2T, H, W) si activeAntenna2
             max_tensor = torch.tensor(max_sequence, dtype=torch.float32)
@@ -442,11 +420,20 @@ class DopplerDataset(Dataset):
                 img2 = img2[..., 0:1]  # (H, W, 1)
                 img_tensor = np.concatenate([img_tensor, img2], axis=-1)  # (H, W, 2)
 
+                max_val2 = self.data_loader.get_max_values2(exp_name)[i]
+                max_val2_normalized = (max_val2 - self.mean_max_values2) / self.std_max_values2
+                max2_tensor = torch.tensor([max_val2_normalized], dtype=torch.float32)
+
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
-            max_val = self.data_loader.get_max_values(exp_name)
-            max_value = max_val[image_index] if image_index < len(max_val) else 0.0
-            max_tensor = torch.tensor([max_value], dtype=torch.float32)
+            max_val = self.data_loader.get_max_values(exp_name)[image_index]
+            max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
+
+            if self.activeAntenna2 :
+                max_tensor = torch.tensor([max_val_normalized, max_val2_normalized], dtype=torch.float32)
+            else:
+                max_tensor = torch.tensor([max_val_normalized], dtype=torch.float32)
+
 
         # Label
         labels = self.data_loader.get_labels(exp_name)
