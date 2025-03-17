@@ -40,14 +40,22 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     max_values = []
     min_values = []
 
-    for i in range(min(n_radar_maps, n_labels)):
+    #for i in range(min(n_radar_maps, n_labels)):
         #save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudes")
         #save_radar_maps(radar_data['phases'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarPhases")
-        save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesAntenna{antenna_i}")
-        save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
+        #save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesAntenna{antenna_i}")
+        #save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")
         #max_values.append(radar_data['magnitudes'][i].max())
         #min_values.append(radar_data['magnitudes'][i].min())
+
+    # Save max values for antenna 1 as a numpy array into a new folder
+    os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesAntenna{antenna_i}", exist_ok=True)
+    np.save(f"{base_path}/{exp_names[f]}/MaxValuesAntenna{antenna_i}/max_values.npy", np.array(max_values))
+
+    # Save min values for antenna 1 as a numpy array into a new folder
+    os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesAntenna{antenna_i}", exist_ok=True)
+    np.save(f"{base_path}/{exp_names[f]}/MinValuesAntenna{antenna_i}/min_values.npy", np.array(min_values))
 
     # Save the labels as a numpy array into a new folder
     #os.makedirs(f"{base_path}/{exp_names[f]}/Labels", exist_ok=True)
