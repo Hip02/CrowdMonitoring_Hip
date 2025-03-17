@@ -179,7 +179,7 @@ def save_radar_maps(radar_map, number, label, output_folder):
         Save the radar map in the output folder as "map_i.png"
     """
 
-    """
+    
     # Ensure output directory exists
     os.makedirs(output_folder, exist_ok=True)
 
@@ -193,6 +193,7 @@ def save_radar_maps(radar_map, number, label, output_folder):
     # Save image without compression
     filename = os.path.join(output_folder, f"map_{number}_{label}.png")
     image.save(filename, format="PNG", compress_level=0)
+    
     """
     os.makedirs(output_folder, exist_ok=True)
 
@@ -202,7 +203,7 @@ def save_radar_maps(radar_map, number, label, output_folder):
 
     #filename = os.path.join(output_folder, f"map_{number}_{label}.tiff")
     #tifffile.imwrite(filename, radar_map.astype(np.float32))
-
+    """
 
 def save_radar_max_values(max_values, timestamps, output_folder):
     """
