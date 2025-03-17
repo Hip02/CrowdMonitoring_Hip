@@ -28,10 +28,14 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
 
     radar_data = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=antenna_i)
     timestamps = radar_data['timestamps']
-    video_data = process_video_file(input_video_filename, timestamps, saveFrames=True)
+    #video_data = process_video_file(input_video_filename, timestamps, saveFrames=True)
+
+    # Load Labels
+    labels_saved = np.load(f"{base_path}/{exp_names[f]}/Labels/labels.npy")
+    n_labels = len(labels_saved)
 
     n_radar_maps = len(radar_data['magnitudes'])
-    n_labels = len(video_data['labels'])
+    #n_labels = len(video_data['labels'])
 
     max_values = []
     min_values = []
@@ -39,8 +43,8 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     for i in range(min(n_radar_maps, n_labels)):
         #save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudes")
         #save_radar_maps(radar_data['phases'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarPhases")
-        save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudesAntenna{antenna_i}")
-        save_radar_maps(radar_data['phases'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
+        save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesAntenna{antenna_i}")
+        save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")
         #max_values.append(radar_data['magnitudes'][i].max())
         #min_values.append(radar_data['magnitudes'][i].min())
