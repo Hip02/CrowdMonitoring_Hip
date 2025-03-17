@@ -71,7 +71,7 @@ class DataLoader:
         self.exp_list = exp_list if exp_list else self._discover_experiments()
         self.data = {
             "min_values": {}, "max_values": {}, "labels": {}, 
-            "magnitudes": {}, "phases": {}, "video_frames": {}
+            "magnitudes": {}, "phases": {}, "magnitudes2": {}, "phases2": {}
         }
 
         # Chargement immédiat des données (sauf les cartes radar)
@@ -84,7 +84,7 @@ class DataLoader:
     def _load_data(self, to_load):
         """Charge certaines données immédiatement, sauf les images, avec barre de chargement."""
         if to_load is None:
-            to_load = ["max_values", "labels", "magnitudes"]
+            to_load = ["max_values", "labels", "magnitudes", "magnitudes2"]
 
         # Utilisation de tqdm pour afficher une barre de progression
         for exp in tqdm(self.exp_list, desc="🔄 Chargement des données", unit="exp"):
@@ -98,6 +98,8 @@ class DataLoader:
             # Utilisation du proxy pour le chargement différé des images
             self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudes"))
             self.data["phases"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhases"))
+            self.data["magnitudes2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudesAntenna2"))
+            self.data["phases2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhasesAntenna2"))
 
     def _load_min_values(self, exp_name):
         """Loads min values from a single file."""
@@ -128,6 +130,21 @@ class DataLoader:
         if exp_name in self.data["magnitudes"]:
             return self.data["magnitudes"][exp_name].load_image(index)
         return None  # Retourne None si l'expérience n'existe pas
+    
+    def get_magnitude2(self, exp_name, index):
+        """
+        Récupère une seule image de magnitude à la demande.
+
+        Args:
+            exp_name (str): Nom de l'expérience.
+            index (int): Index de l'image dans la séquence.
+
+        Returns:
+            np.ndarray: Image radar de magnitude sous forme de tableau numpy.
+        """
+        if exp_name in self.data["magnitudes2"]:
+            return self.data["magnitudes2"][exp_name].load_image(index)
+        return None
 
     def get_number_of_magnitudes(self, exp_name):
         """
@@ -232,9 +249,17 @@ class DataLoader:
         """Retrieves magnitudes, either for a specific experiment or combined."""
         return self.data["magnitudes"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["magnitudes"])
 
+    def get_magnitudes2(self, exp_name=None):
+        """Retrieves magnitudes, either for a specific experiment or combined."""
+        return self.data["magnitudes2"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["magnitudes2"])
+
     def get_phases(self, exp_name=None):
         """Retrieves radar phases, either for a specific experiment or combined."""
         return self.data["phases"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["phases"])
+
+    def get_phases2(self, exp_name=None):
+        """Retrieves radar phases, either for a specific experiment or combined."""
+        return self.data["phases2"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["phases2"])
 
     def get_fft(self, exp_name=None):
         """Retrieves FFT magnitudes, either for a specific experiment or combined."""
@@ -268,6 +293,8 @@ class DopplerDataset(Dataset):
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         if self.predictionType == "classification":
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
+        
+        self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
 
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
@@ -378,26 +405,44 @@ class DopplerDataset(Dataset):
         if self.use_prev_frames:
             sequence = []
             max_sequence = []
-            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):  # <-- inclut frame cible !
+
+            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):
                 img = self.data_loader.get_magnitude(exp_name, i)
                 if img is None:
                     raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")
                 img = img.astype(np.float32) / 255.0
-                sequence.append(img[..., 0])  # (H, W)
+                sequence.append(img[..., 0])  # (H, W) pour antenne 1
+
+                if self.activeAntenna2:
+                    img2 = self.data_loader.get_magnitude2(exp_name, i)
+                    if img2 is None:
+                        raise FileNotFoundError(f"Image2 index {i} non trouvée pour {exp_name}")
+                    img2 = img2.astype(np.float32) / 255.0
+                    sequence.append(img2[..., 0])  # (H, W) pour antenne 2
 
                 max_val = self.data_loader.get_max_values(exp_name)
                 max_value = max_val[i] if i < len(max_val) else 0.0
                 max_sequence.append(max_value)
 
-            img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (nb_prev_frames+1, H, W)
-            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)  # (nb_prev_frames+1,)
-        
+            img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (T, H, W) ou (2T, H, W) si activeAntenna2
+            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)
+
         else:
             img = self.data_loader.get_magnitude(exp_name, image_index)
             if img is None:
                 raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name}")
             img = img.astype(np.float32) / 255.0
-            img_tensor = torch.tensor(img, dtype=torch.float32).permute(2, 0, 1)  # (1, H, W)
+            img_tensor = img[..., 0:1]  # (H, W, 1)
+
+            if self.activeAntenna2:
+                img2 = self.data_loader.get_magnitude2(exp_name, image_index)
+                if img2 is None:
+                    raise FileNotFoundError(f"Image2 index {image_index} non trouvée pour {exp_name}")
+                img2 = img2.astype(np.float32) / 255.0
+                img2 = img2[..., 0:1]  # (H, W, 1)
+                img_tensor = np.concatenate([img_tensor, img2], axis=-1)  # (H, W, 2)
+
+            img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
             max_val = self.data_loader.get_max_values(exp_name)
             max_value = max_val[image_index] if image_index < len(max_val) else 0.0
