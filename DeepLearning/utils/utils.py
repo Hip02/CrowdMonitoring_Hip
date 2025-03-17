@@ -420,9 +420,8 @@ class DopplerDataset(Dataset):
                 img2 = img2[..., 0:1]  # (H, W, 1)
                 img_tensor = np.concatenate([img_tensor, img2], axis=-1)  # (H, W, 2)
 
-                max_val2 = self.data_loader.get_max_values2(exp_name)[i]
+                max_val2 = self.data_loader.get_max_values2(exp_name)[image_index]
                 max_val2_normalized = (max_val2 - self.mean_max_values2) / self.std_max_values2
-                max2_tensor = torch.tensor([max_val2_normalized], dtype=torch.float32)
 
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
