@@ -63,7 +63,7 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
 
     # ✅ Libération de la mémoire après chaque vidéo
     del radar_data
-    del video_data
+    #del video_data
     del timestamps
     #del max_values
     #del min_values
