@@ -263,6 +263,7 @@ class DopplerDataset(Dataset):
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
         
         self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
+        self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
 
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
@@ -385,14 +386,20 @@ class DopplerDataset(Dataset):
             indices = [image_index]
 
         for i in indices:
-            img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1))
+            img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="magnitude"))
             max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=1))
 
+            if self.activePhase:
+                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="phase"))
+
             if self.activeAntenna2:
-                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2))
+                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2, type="magnitude"))
                 max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=2))
 
-        if self.use_prev_frames or self.activeAntenna2:
+                if self.activePhase:
+                    img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2, type="phase"))
+
+        if self.use_prev_frames or self.activeAntenna2 or self.activePhase:
             img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
         else:
             # Ajouter une dimension canal si nécessaire et concaténer
@@ -405,15 +412,24 @@ class DopplerDataset(Dataset):
         return img_tensor, max_tensor, label_tensor
 
 
-    def _load_and_preprocess_image(self, exp_name, image_index, antenna=1):
-        if antenna == 1:
-            img = self.data_loader.get_magnitude(exp_name, image_index)
-        else:
-            img = self.data_loader.get_magnitude2(exp_name, image_index)
+    def _load_and_preprocess_image(self, exp_name, image_index, type="magnitude", antenna=1):
+
+        if type == "magnitude":
+            if antenna == 1:
+                img = self.data_loader.get_magnitude(exp_name, image_index)
+            else:
+                img = self.data_loader.get_magnitude2(exp_name, image_index)
+
+        if type == "phase":
+            if antenna == 1:
+                img = self.data_loader.get_phases(exp_name).load_image(image_index)
+            else:
+                img = self.data_loader.get_phases2(exp_name).load_image(image_index)
 
         if img is None:
             raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name} (antenna {antenna})")
         img = img.astype(np.float32) / 255.0
+        
         return img[..., 0]
 
 

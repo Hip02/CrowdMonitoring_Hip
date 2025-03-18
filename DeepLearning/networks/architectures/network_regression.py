@@ -40,6 +40,15 @@ class DopplerResNetRegression(nn.Module):
         nb_input_frames = param["MODEL"].get("NB_PREV_FRAMES", 0) + 1
         if param["DATASET"].get("ACTIVE_ANTENNA2", False):
             nb_input_frames += 1
+        
+        number_of_max = nb_input_frames
+
+        if param["DATASET"].get("ACTIVE_PHASE", False):
+            nb_input_frames += 1
+        
+        if param["DATASET"].get("ACTIVE_ANTENNA2", False) and param["DATASET"].get("ACTIVE_PHASE", False):
+            nb_input_frames += 1
+
         out_channels_conv1 = param["MODEL"]["NB_CHANNELS"]
         self.use_atrous_conv1 = param["MODEL"].get("USE_ATROUS_CONV1", False)
         self.atrous_dilation_conv1 = param["MODEL"].get("ATROUS_DILATION_CONV1", 2)

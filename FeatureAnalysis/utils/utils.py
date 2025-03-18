@@ -1133,7 +1133,7 @@ def plot_pair_feature_space(feature1, feature2, labels, feature1_name="Feature 1
 
     plt.show()
 
-def plot_label_distribution(labels, title="Label Distribution"):
+def plot_label_distribution(labels, title="Number of people distribution"):
     """
     Plots a histogram showing the distribution of labels.
 
@@ -1146,17 +1146,17 @@ def plot_label_distribution(labels, title="Label Distribution"):
     """
     labels = np.array(labels)  # S'assurer que c'est un tableau numpy
     
-    plt.figure(figsize=(8, 5))
+    plt.figure(figsize=(14, 5))
     plt.hist(labels, bins=np.arange(labels.min(), labels.max() + 2) - 0.5, edgecolor='black', alpha=0.7)
 
-    plt.xlabel("Labels")
-    plt.ylabel("Count")
+    plt.xlabel("Number of people")
+    plt.ylabel("Count of frames")
     plt.title(title)
     plt.xticks(np.arange(labels.min(), labels.max() + 1))  # Assurer des ticks entiers
 
     plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    plt.show()
+    plt.savefig("label_distribution.pdf")
 
 def define_models():
     """Définit les modèles de classification."""
