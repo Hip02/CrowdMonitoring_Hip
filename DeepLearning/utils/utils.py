@@ -392,12 +392,11 @@ class DopplerDataset(Dataset):
                 img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2))
                 max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=2))
 
-        if self.use_prev_frames:
+        if self.use_prev_frames or self.activeAntenna2:
             img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
         else:
             # Ajouter une dimension canal si nécessaire et concaténer
             img_tensor = np.concatenate(img_stack, axis=-1)  # (H, W, C)
-            print(img_tensor.shape)
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
@@ -409,10 +408,8 @@ class DopplerDataset(Dataset):
     def _load_and_preprocess_image(self, exp_name, image_index, antenna=1):
         if antenna == 1:
             img = self.data_loader.get_magnitude(exp_name, image_index)
-            print(f"img 1 shape = {img.shape}")
         else:
             img = self.data_loader.get_magnitude2(exp_name, image_index)
-            print(f"img 2 shape = {img.shape}")
 
         if img is None:
             raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name} (antenna {antenna})")
