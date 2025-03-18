@@ -376,75 +376,70 @@ class DopplerDataset(Dataset):
         exp_name, image_index = self.data_indices[idx]
         image_index = int(image_index)
 
+        img_stack = []
+        max_stack = []
+
         if self.use_prev_frames:
-            sequence = []
-            max_sequence = []
-
-            for i in range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps):
-                img = self.data_loader.get_magnitude(exp_name, i)
-                if img is None:
-                    raise FileNotFoundError(f"Image index {i} non trouvée pour {exp_name}")
-                img = img.astype(np.float32) / 255.0
-                sequence.append(img[..., 0])  # (H, W) pour antenne 1
-
-                if self.activeAntenna2:
-                    img2 = self.data_loader.get_magnitude2(exp_name, i)
-                    if img2 is None:
-                        raise FileNotFoundError(f"Image2 index {i} non trouvée pour {exp_name}")
-                    img2 = img2.astype(np.float32) / 255.0
-                    sequence.append(img2[..., 0])  # (H, W) pour antenne 2
-
-                    max_val2 = self.data_loader.get_max_values2(exp_name)[i]
-                    max_val2_normalized = (max_val2 - self.mean_max_values2) / self.std_max_values2
-                    max_sequence.append(max_val2_normalized)
-
-                max_val = self.data_loader.get_max_values(exp_name)[i]
-                #max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
-                max_sequence.append(max_val_normalized)
-
-            img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (T, H, W) ou (2T, H, W) si activeAntenna2
-            max_tensor = torch.tensor(max_sequence, dtype=torch.float32)
-
+            indices = range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps)
         else:
-            img = self.data_loader.get_magnitude(exp_name, image_index)
-            if img is None:
-                raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name}")
-            img = img.astype(np.float32) / 255.0
-            img_tensor = img[..., 0:1]  # (H, W, 1)
+            indices = [image_index]
+
+        for i in indices:
+            img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1))
+            # Print shapes
+            max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=1))
 
             if self.activeAntenna2:
-                img2 = self.data_loader.get_magnitude2(exp_name, image_index)
-                if img2 is None:
-                    raise FileNotFoundError(f"Image2 index {image_index} non trouvée pour {exp_name}")
-                img2 = img2.astype(np.float32) / 255.0
-                img2 = img2[..., 0:1]  # (H, W, 1)
-                img_tensor = np.concatenate([img_tensor, img2], axis=-1)  # (H, W, 2)
+                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2))
+                max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=2))
 
-                max_val2 = self.data_loader.get_max_values2(exp_name)[image_index]
-                max_val2_normalized = (max_val2 - self.mean_max_values2) / self.std_max_values2
-
+        if self.use_prev_frames:
+            img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
+        else:
+            # Ajouter une dimension canal si nécessaire et concaténer
+            img_tensor = np.concatenate(img_stack, axis=-1)  # (H, W, C)
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
-            max_val = self.data_loader.get_max_values(exp_name)[image_index]
-            max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
+        max_tensor = torch.tensor(max_stack, dtype=torch.float32)
+        label_tensor = self._load_label(exp_name, image_index)
 
-            if self.activeAntenna2 :
-                max_tensor = torch.tensor([max_val_normalized, max_val2_normalized], dtype=torch.float32)
-            else:
-                max_tensor = torch.tensor([max_val_normalized], dtype=torch.float32)
-
-
-        # Label
-        labels = self.data_loader.get_labels(exp_name)
-        label = labels[image_index]
-        if self.predictionType == "classification":
-            label = self._convert_label_to_class(label)
-            label_tensor = torch.tensor(label, dtype=torch.long)
-        else:
-            label = (label - self.mean_label) / self.std_label
-            label_tensor = torch.tensor([label], dtype=torch.float32)
+        # Print shapes
+        print(f"img_tensor shape = {img_tensor.shape}, max_tensor shape = {max_tensor.shape}, label_tensor shape = {label_tensor.shape}")
 
         return img_tensor, max_tensor, label_tensor
+
+
+    def _load_and_preprocess_image(self, exp_name, image_index, antenna=1):
+        if antenna == 1:
+            img = self.data_loader.get_magnitude(exp_name, image_index)
+        else:
+            img = self.data_loader.get_magnitude2(exp_name, image_index)
+
+        if img is None:
+            raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name} (antenna {antenna})")
+        img = img.astype(np.float32) / 255.0
+        return img[..., 0]
+
+
+    def _get_normalized_max_value(self, exp_name, index, antenna=1):
+        if antenna == 1:
+            max_val = self.data_loader.get_max_values(exp_name)[index]
+            return (max_val - self.mean_max_values) / self.std_max_values
+        else:
+            max_val = self.data_loader.get_max_values2(exp_name)[index]
+            return (max_val - self.mean_max_values2) / self.std_max_values2
+
+
+    def _load_label(self, exp_name, image_index):
+        labels = self.data_loader.get_labels(exp_name)
+        label = labels[image_index]
+
+        if self.predictionType == "classification":
+            label = self._convert_label_to_class(label)
+            return torch.tensor(label, dtype=torch.long)
+        else:
+            label = (label - self.mean_label) / self.std_label
+            return torch.tensor([label], dtype=torch.float32)
 
     
 def plot_learning_curves(train_losses, val_losses, results_path, title="Learning Curves"):
