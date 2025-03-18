@@ -87,7 +87,7 @@ class DopplerResNetRegression(nn.Module):
         self.layer3 = self._make_layer(block, 512, layers[3], stride=2, dilation=self.dilation)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 + nb_input_frames, 1)
+        self.fc = nn.Linear(512 + number_of_max, 1)
 
     def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
         downsample = None
