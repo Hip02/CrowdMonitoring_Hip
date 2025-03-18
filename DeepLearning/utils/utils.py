@@ -409,8 +409,10 @@ class DopplerDataset(Dataset):
     def _load_and_preprocess_image(self, exp_name, image_index, antenna=1):
         if antenna == 1:
             img = self.data_loader.get_magnitude(exp_name, image_index)
+            print(f"img 1 shape = {img.shape}")
         else:
             img = self.data_loader.get_magnitude2(exp_name, image_index)
+            print(f"img 2 shape = {img.shape}")
 
         if img is None:
             raise FileNotFoundError(f"Image index {image_index} non trouvée pour {exp_name} (antenna {antenna})")
