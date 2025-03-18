@@ -215,7 +215,10 @@ class Network_Class:
             plt.legend()
             plt.grid(True)
             plt.tight_layout()
-            plt.show()
+
+            # Os make dir
+            createFolder(self.resultsPath + "/_Predictions/")
+            plt.savefig(self.resultsPath + "/_Predictions/predictions.pdf")
 
             # Ajout 1 : arrondi à l'entier le plus proche
             rounded_preds = np.round(all_preds).astype(int)
@@ -232,7 +235,10 @@ class Network_Class:
             plt.xlabel('Predicted label')
             plt.ylabel('True label')
             plt.tight_layout()
-            plt.show()
+
+            # Os make dir
+            createFolder(self.resultsPath + '/_ConfusionMatrix/')
+            plt.savefig(self.resultsPath + '/_ConfusionMatrix/confusion_matrix.pdf')
 
             return mean_loss
 

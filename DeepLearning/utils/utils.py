@@ -399,7 +399,7 @@ class DopplerDataset(Dataset):
                     max_sequence.append(max_val2_normalized)
 
                 max_val = self.data_loader.get_max_values(exp_name)[i]
-                max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
+                #max_val_normalized = (max_val - self.mean_max_values) / self.std_max_values
                 max_sequence.append(max_val_normalized)
 
             img_tensor = torch.tensor(np.stack(sequence, axis=0), dtype=torch.float32)  # (T, H, W) ou (2T, H, W) si activeAntenna2
@@ -447,7 +447,7 @@ class DopplerDataset(Dataset):
         return img_tensor, max_tensor, label_tensor
 
     
-def plot_learning_curves(train_losses, val_losses, title="Learning Curves"):
+def plot_learning_curves(train_losses, val_losses, results_path, title="Learning Curves"):
     """Plot the learning curves of a training session."""
     plt.figure(figsize=(12, 6))
     plt.plot(train_losses, label="Train Loss", color='blue')
@@ -457,4 +457,6 @@ def plot_learning_curves(train_losses, val_losses, title="Learning Curves"):
     plt.title(title)
     plt.legend()
     plt.grid(True)
-    plt.show()
+    # Os make dir
+    os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
+    plt.savefig(results_path + "/_LearningCurves/learning_curve.pdf")

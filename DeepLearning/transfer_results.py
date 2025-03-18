@@ -9,7 +9,7 @@ local_destination = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip/
 # ---------------------
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
-subfolders = ["Regression/BET_ResNet2"]
+subfolders = ["Regression/BET_ResNet6"]
 
 for subfolder in subfolders :
 
