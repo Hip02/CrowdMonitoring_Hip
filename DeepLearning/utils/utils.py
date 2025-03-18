@@ -386,7 +386,6 @@ class DopplerDataset(Dataset):
 
         for i in indices:
             img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1))
-            # Print shapes
             max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=1))
 
             if self.activeAntenna2:
@@ -402,9 +401,6 @@ class DopplerDataset(Dataset):
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
         label_tensor = self._load_label(exp_name, image_index)
-
-        # Print shapes
-        print(f"img_tensor shape = {img_tensor.shape}, max_tensor shape = {max_tensor.shape}, label_tensor shape = {label_tensor.shape}")
 
         return img_tensor, max_tensor, label_tensor
 
