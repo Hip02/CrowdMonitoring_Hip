@@ -397,6 +397,7 @@ class DopplerDataset(Dataset):
         else:
             # Ajouter une dimension canal si nécessaire et concaténer
             img_tensor = np.concatenate(img_stack, axis=-1)  # (H, W, C)
+            print(img_tensor.shape)
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
