@@ -402,14 +402,7 @@ class DopplerDataset(Dataset):
         if self.use_prev_frames or self.activeAntenna2 or self.activePhase:
             img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
         else:
-            # Ajouter une dimension canal si nécessaire et concaténer
             img_tensor = torch.tensor(img_stack)
-
-            print(f"img_tensor shape = {img_tensor.shape}")
-
-            raise SystemError("Erreur préméditée")
-
-            img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
         label_tensor = self._load_label(exp_name, image_index)
