@@ -402,7 +402,7 @@ class DopplerDataset(Dataset):
         if self.use_prev_frames or self.activeAntenna2 or self.activePhase:
             img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
         else:
-            img_tensor = torch.tensor(img_stack)
+            img_tensor = torch.tensor(np.array(img_stack))
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
         label_tensor = self._load_label(exp_name, image_index)
