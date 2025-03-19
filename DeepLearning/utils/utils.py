@@ -403,7 +403,7 @@ class DopplerDataset(Dataset):
             img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
         else:
             # Ajouter une dimension canal si nécessaire et concaténer
-            img_tensor = torch.tensor(img_stack).unsqueeze(0)
+            img_tensor = torch.tensor(img_stack)
 
             print(f"img_tensor shape = {img_tensor.shape}")
 
