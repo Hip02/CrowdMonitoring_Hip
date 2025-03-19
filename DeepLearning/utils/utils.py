@@ -405,6 +405,8 @@ class DopplerDataset(Dataset):
             # Ajouter une dimension canal si nécessaire et concaténer
             img_tensor = torch.tensor(img_stack).unsqueeze(0)
 
+            print(f"img_tensor shape = {img_tensor.shape}")
+
             raise SystemError("Erreur préméditée")
 
             img_tensor = torch.tensor(img_tensor, dtype=torch.float32).permute(2, 0, 1)  # (C, H, W)
