@@ -15,9 +15,9 @@ args = parser.parse_args()
 base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
-#l_exp = ["Regression/BET_ResNet1", "Regression/BET_ResNet2","Regression/BET_ResNet3", "Regression/BET_ResNet4", "Regression/BET_ResNet5", "Regression/BET_ResNet6", "Regression/BET_ResNet7"]
+l_exp = ["ResNet_Folds"]
 
-l_exp = ["Regression/BET_Simple1","Regression/BET_Simple2","Regression/BET_Simple3","Regression/BET_Simple4"]
+folds = list(range(1, 9))
 
 # Get experiment path from index
 try:
@@ -26,46 +26,50 @@ except IndexError:
     print(f"❌ Invalid index {args.exp_index}. Please choose a value between 0 and {len(l_exp) - 1}.")
     sys.exit(1)
 
-print(f"🔔 Starting {exp}")
+for fold in folds:
 
-# Load experiment parameters from YAML
-yaml_path = os.path.join("exp_list", f"{exp}.yaml")
-if not os.path.isfile(yaml_path):
-    print(f"❌ YAML file not found at {yaml_path}")
-    sys.exit(1)
+    print(f"🔔 Starting {exp} fold {fold}")
 
-with open(yaml_path, 'r') as stream:
-    param = yaml.safe_load(stream)
+    # Load experiment parameters from YAML
+    yaml_path = os.path.join("exp_list", f"{exp}.yaml")
+    if not os.path.isfile(yaml_path):
+        print(f"❌ YAML file not found at {yaml_path}")
+        sys.exit(1)
 
-# Prepare results directory
-resultsPath = os.path.join("results", exp)
-os.makedirs(resultsPath, exist_ok=True)
+    with open(yaml_path, 'r') as stream:
+        param = yaml.safe_load(stream)
 
-# Setup logging
-log_file_path = os.path.join(resultsPath, "log.txt")
-class TeeLogger:
-    def __init__(self, *streams):
-        self.streams = streams
-    def write(self, message):
-        for s in self.streams:
-            s.write(message)
-            s.flush()
-    def flush(self):
-        for s in self.streams:
-            s.flush()
-sys.stdout = TeeLogger(sys.stdout, open(log_file_path, "w"))
-sys.stderr = sys.stdout
+    param["DATASET"]["FOLD_NUMBER"] = fold
 
-# Initialize and run the network
-data_loader = DataLoader(base_path, exp_list=all)
-myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
+    # Prepare results directory
+    resultsPath = os.path.join("results", exp, f"fold{fold}")
+    os.makedirs(resultsPath, exist_ok=True)
 
-print(f"{len(myNetwork.dataSetTrain)} samples in training set")
-print(f"{len(myNetwork.dataSetTest)} samples in test set")
-print(f"{len(myNetwork.dataSetVal)} samples in validation set")
+    # Setup logging
+    log_file_path = os.path.join(resultsPath, "log.txt")
+    class TeeLogger:
+        def __init__(self, *streams):
+            self.streams = streams
+        def write(self, message):
+            for s in self.streams:
+                s.write(message)
+                s.flush()
+        def flush(self):
+            for s in self.streams:
+                s.flush()
+    sys.stdout = TeeLogger(sys.stdout, open(log_file_path, "w"))
+    sys.stderr = sys.stdout
 
-train_losses, val_losses = myNetwork.train()
+    # Initialize and run the network
+    data_loader = DataLoader(base_path, exp_list=all)
+    myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
-# Save results
-np.save(os.path.join(resultsPath, 'train_losses.npy'), train_losses)
-np.save(os.path.join(resultsPath, 'val_losses.npy'), val_losses)
+    print(f"{len(myNetwork.dataSetTrain)} samples in training set")
+    print(f"{len(myNetwork.dataSetTest)} samples in test set")
+    print(f"{len(myNetwork.dataSetVal)} samples in validation set")
+
+    train_losses, val_losses = myNetwork.train()
+
+    # Save results
+    np.save(os.path.join(resultsPath, 'train_losses.npy'), train_losses)
+    np.save(os.path.join(resultsPath, 'val_losses.npy'), val_losses)

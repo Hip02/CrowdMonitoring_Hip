@@ -11,7 +11,8 @@ import cv2
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
-from sklearn.model_selection import train_test_split
+import yaml
+from termcolor import colored
 
 
 class LazyImageLoader:
@@ -265,6 +266,8 @@ class DopplerDataset(Dataset):
         self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
         self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
 
+        self.fold_number = param["DATASET"].get("FOLD_NUMBER", 1)
+
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
         self.exp_list = self.data_loader.exp_list
@@ -288,8 +291,8 @@ class DopplerDataset(Dataset):
         self.mean_max_values2 = np.mean(self.data_loader.get_max_values2())
         self.std_max_values2 = np.std(self.data_loader.get_max_values2())
 
-        # Split des données
-        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
+        # Split des données (3 modes différents)
+        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_exp(fold_number=self.fold_number) #self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
 
         if self.mode == "train":
             self.data_indices = self.train_indices
@@ -299,6 +302,31 @@ class DopplerDataset(Dataset):
             self.data_indices = self.test_indices
         else:
             raise ValueError("Le mode doit être 'train', 'val' ou 'test'.")
+        
+        if self.mode == "train":
+            print(colored("\n" + "="*60, "blue"))
+            print(colored("             DOPPLER DATASET INITIALIZATION SUMMARY", "green", attrs=["bold"]))
+            print(colored("="*60, "blue"))
+
+            print(colored("→ Active Antenna 2", "cyan") + "         : " + colored(str(self.activeAntenna2), "green" if self.activeAntenna2 else "red"))
+            print(colored("→ Active Phase", "cyan") + "             : " + colored(str(self.activePhase), "green" if self.activePhase else "red"))
+            print(colored("→ Use previous frames", "cyan") + "      : " + colored(str(self.use_prev_frames), "green" if self.use_prev_frames else "red"))
+            if self.use_prev_frames:
+                print(colored("→ Number of previous frames", "cyan") + ": " + colored(f"{self.nb_prev_frames}", "yellow"))
+                print(colored("→ Time steps", "cyan") + "               : " + colored(f"{self.time_steps}", "yellow"))
+
+            print(colored("→ Fold number", "cyan") + "              : " + colored(f"{self.fold_number}", "yellow"))
+            if self.sub_sample_factor > 1:
+                print(colored("→ Sub-sample factor", "cyan") + "        : " + colored(f"{self.sub_sample_factor}", "yellow"))
+            
+            print(colored("→ Total experiments", "cyan") + "        : " + colored(f"{len(self.exp_list)}", "white"))
+            print(colored("→ Dataset sizes (samples)", "cyan") + " :")
+            print("   " + colored("• Train set", "cyan") + "             : " + colored(f"{len(self.train_indices)}", "green"))
+            print("   " + colored("• Validation set", "cyan") + "        : " + colored(f"{len(self.val_indices)}", "yellow"))
+            print("   " + colored("• Test set", "cyan") + "              : " + colored(f"{len(self.test_indices)}", "magenta"))
+            print(colored("→ Final selected dataset", "cyan") + "   : " + colored(f"{len(self.train_indices) + len(self.val_indices) + len(self.test_indices)} samples", "white", attrs=["bold"]))
+            print(colored("="*60 + "\n", "blue"))
+
 
     def _create_file_indices(self):
         data_indices = []
@@ -308,6 +336,29 @@ class DopplerDataset(Dataset):
             for i in range(self.nb_prev_frames * self.time_steps, num_images, self.sub_sample_factor):
                 data_indices.append((exp, i))  # i = frame cible
         return np.array(data_indices)
+
+    def _split_dataset_by_exp(self, fold_number: int):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_dir, "folds_config.yaml")
+
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+
+        fold_key = f"FOLD{fold_number}"
+        fold_data = config["FOLDS"][fold_key]
+
+        train_exps = [f"NewExp{e}" for e in fold_data["TRAIN"]]
+        val_exps = [f"NewExp{e}" for e in fold_data["VAL"]]
+        test_exps = [f"NewExp{e}" for e in fold_data["TEST"]]
+
+        # ✅ conversion propre de tous les éléments (au cas où tu n’aies pas encore fait ça avant)
+        data_indices = [list(idx) for idx in self.data_indices]
+
+        train_indices = [idx for idx in data_indices if idx[0] in train_exps]
+        val_indices = [idx for idx in data_indices if idx[0] in val_exps]
+        test_indices = [idx for idx in data_indices if idx[0] in test_exps]
+
+        return train_indices, val_indices, test_indices
 
     def _split_dataset_by_blocks(self):
         train_indices, val_indices, test_indices = [], [], []
@@ -345,8 +396,9 @@ class DopplerDataset(Dataset):
                 i += current_block_size
 
         return np.array(train_indices), np.array(val_indices), np.array(test_indices)
-    """
-    def _split_dataset(self, shuffle, random_seed):
+    
+    
+    def _split_dataset_random_shuffle(self, shuffle, random_seed):
         np.random.seed(random_seed)
         indices = np.arange(len(self.data_indices))
         if shuffle:
@@ -361,7 +413,7 @@ class DopplerDataset(Dataset):
         test_indices = indices[train_size + val_size:]
 
         return self.data_indices[train_indices], self.data_indices[val_indices], self.data_indices[test_indices]
-    """
+    
     def _compute_label_range(self):
         all_labels = self.data_loader.get_labels()
         return min(all_labels), max(all_labels)

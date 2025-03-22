@@ -1,7 +1,8 @@
 import subprocess
 
 # Dossier source local
-LOCAL_BASE_DIR = "/Volumes/HIP_BACKUP/MEMOIRE/Code/MyDB2"
+LOCAL_BASE_DIR = "/Volumes/HIP_BACKUP/M" \
+"EMOIRE/Code/MyDB2"
 #LOCAL_BASE_DIR = "/Volumes/HIP_BACKUP/MEMOIRE/DATA_COLLECTION"
 
 

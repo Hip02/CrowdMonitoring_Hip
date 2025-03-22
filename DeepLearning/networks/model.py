@@ -9,6 +9,7 @@ from networks.architectures.network_classification import DopplerNetClassificati
 from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
 from utils.utils import DopplerDataset
 import seaborn as sns
+from termcolor import colored
 
 import torch
 from torch.utils.data import DataLoader
@@ -50,7 +51,30 @@ class Network_Class:
         self.valDataLoader = DataLoader(self.dataSetVal, batch_size=self.batchSize, shuffle=False, num_workers=4)
         self.testDataLoader = DataLoader(self.dataSetTest, batch_size=self.batchSize, shuffle=False, num_workers=4)
 
-        print("✅ Network Initialized")
+        print(colored("\n" + "="*60, "blue"))
+        print(colored("                 NETWORK INITIALIZATION SUMMARY", "green", attrs=["bold"]))
+        print(colored("="*60, "blue"))
+
+        print(colored("→ Device", "cyan") + "                  : " + colored(f"{self.device}", "white", attrs=["bold"]))
+        print(colored("→ Results path", "cyan") + "            : " + colored(f"{self.resultsPath}", "yellow"))
+        print(colored("→ Epochs", "cyan") + "                  : " + colored(f"{self.epoch}", "yellow"))
+        print(colored("→ Learning rate", "cyan") + "           : " + colored(f"{self.lr}", "yellow"))
+        print(colored("→ Batch size", "cyan") + "              : " + colored(f"{self.batchSize}", "yellow"))
+        print(colored("→ Prediction type", "cyan") + "         : " + colored(f"{self.predictionType}", "green" if self.predictionType=="regression" else "magenta", attrs=["bold"]))
+        print(colored("→ Data augmentation", "cyan") + "       : " + colored(str(self.data_augm), "green" if self.data_augm else "red"))
+
+        # Scheduler info (if exists)
+        if param["TRAINING"].get("SCHEDULER", False):
+            step = param["TRAINING"].get("LR_STEP", 10)
+            gamma = param["TRAINING"].get("LR_GAMMA", 0.1)
+            print(colored("→ LR Scheduler", "cyan") + "            : " + colored("ENABLED", "green", attrs=["bold"]))
+            print(colored("   • Step size", "cyan") + "            : " + colored(f"{step}", "yellow"))
+            print(colored("   • Gamma", "cyan") + "                : " + colored(f"{gamma}", "yellow"))
+        else:
+            print(colored("→ LR Scheduler", "cyan") + "            : " + colored("DISABLED", "red"))
+
+        print(colored("="*60, "blue") + "\n")
+
 
     def loadWeight(self):
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))

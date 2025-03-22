@@ -197,7 +197,8 @@ class DataLoader:
             np.ndarray: Concatenated NumPy array of all experiments' data in alphabetical order.
         """
         # Sort experiment names alphabetically
-        sorted_experiments = sorted(data_dict.keys())
+        sorted_experiments = sorted(data_dict.keys(), key=lambda x: int(''.join(filter(str.isdigit, x))))
+
 
         # Collect data in sorted order
         all_data = [data_dict[exp] for exp in sorted_experiments if data_dict[exp].size > 0]
