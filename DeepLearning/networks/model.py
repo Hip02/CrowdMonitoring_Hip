@@ -27,22 +27,15 @@ class Network_Class:
         self.resultsPath    = resultsPath
         self.epoch          = param["TRAINING"]["EPOCH"]
         self.device         = param["TRAINING"]["DEVICE"]
-        self.lr             = param["TRAINING"]["LEARNING_RATE"]
+        self.lr             = param["TRAINING"].get("LEARNING_RATE", None)
+        self.maxlr          = param["TRAINING"].get("MAX_LEARNING_RATE", None)
+        self.lr_type        = param["TRAINING"].get("LEARNING_RATE_TYPE", "constant").lower()
+        self.gamma          = param["TRAINING"].get("LR_GAMMA", None)
         self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         self.data_augm      = param["TRAINING"].get("DATA_AUGMENTATION", False)
 
-        if self.predictionType == "classification":
-            self.model = DopplerNetClassification(param).to(self.device)
-            self.criterion = nn.CrossEntropyLoss()
-        if self.predictionType == "regression" or self.predictionType == "regression_temporal":
-            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
-            self.criterion = nn.MSELoss()
-
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        if param["TRAINING"].get("SCHEDULER", False) : self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=param["TRAINING"].get("LR_STEP", 10), gamma=param["TRAINING"].get("LR_GAMMA", 0.1))
-
-
+        # Data Loaders
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
         self.dataSetVal = DopplerDataset(data_loader, mode='val', param=param, sub_sample_factor=sub_sample_factor)
         self.dataSetTest = DopplerDataset(data_loader, mode='test', param=param, sub_sample_factor=sub_sample_factor)
@@ -51,6 +44,44 @@ class Network_Class:
         self.valDataLoader = DataLoader(self.dataSetVal, batch_size=self.batchSize, shuffle=False, num_workers=4)
         self.testDataLoader = DataLoader(self.dataSetTest, batch_size=self.batchSize, shuffle=False, num_workers=4)
 
+        # Model & Loss
+        if self.predictionType == "classification":
+            self.model = DopplerNetClassification(param).to(self.device)
+            self.criterion = nn.CrossEntropyLoss()
+        elif self.predictionType == "regression":
+            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
+            self.criterion = nn.MSELoss()
+
+        # Optimizer (initial LR is required for all schedulers)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+
+        # LR Scheduler
+        self.scheduler = None
+        if self.lr_type == "onecycle":
+            if self.maxlr is None:
+                raise ValueError("MAX_LEARNING_RATE must be defined for OneCycleLR")
+            steps_per_epoch = len(self.trainDataLoader)
+            self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                self.optimizer,
+                max_lr=self.maxlr,
+                epochs=self.epoch,
+                steps_per_epoch=steps_per_epoch,
+                anneal_strategy="linear"
+            )
+        elif self.lr_type == "explr":
+            if self.gamma is None:
+                raise ValueError("LR_GAMMA must be defined for ExponentialLR")
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizer,
+                gamma=self.gamma
+            )
+        elif self.lr_type == "constant":
+            self.scheduler = None  # pas de scheduler utilisé
+        else:
+            raise ValueError(f"Unknown LEARNING_RATE_TYPE '{self.lr_type}'. Choose among: constant, explr, onecycle.")
+
+
+        
         print(colored("\n" + "="*60, "blue"))
         print(colored("                 NETWORK INITIALIZATION SUMMARY", "green", attrs=["bold"]))
         print(colored("="*60, "blue"))
@@ -64,14 +95,12 @@ class Network_Class:
         print(colored("→ Data augmentation", "cyan") + "       : " + colored(str(self.data_augm), "green" if self.data_augm else "red"))
 
         # Scheduler info (if exists)
-        if param["TRAINING"].get("SCHEDULER", False):
-            step = param["TRAINING"].get("LR_STEP", 10)
-            gamma = param["TRAINING"].get("LR_GAMMA", 0.1)
-            print(colored("→ LR Scheduler", "cyan") + "            : " + colored("ENABLED", "green", attrs=["bold"]))
-            print(colored("   • Step size", "cyan") + "            : " + colored(f"{step}", "yellow"))
-            print(colored("   • Gamma", "cyan") + "                : " + colored(f"{gamma}", "yellow"))
-        else:
-            print(colored("→ LR Scheduler", "cyan") + "            : " + colored("DISABLED", "red"))
+        if self.lr_type != "constant":
+            print(colored("→ LR scheduler", "cyan") + "            : " + colored(f"{self.lr_type}", "yellow"))
+            if self.lr_type == "onecycle":
+                print(colored("→ Max learning rate", "cyan") + "       : " + colored(f"{self.maxlr}", "yellow"))
+            elif self.lr_type == "explr":
+                print(colored("→ LR gamma", "cyan") + "               : " + colored(f"{self.gamma}", "yellow"))
 
         print(colored("="*60, "blue") + "\n")
 
@@ -122,7 +151,7 @@ class Network_Class:
                 max_doppler = max_doppler.to(self.device)
                 labels = labels.to(self.device)
 
-                if self.predictionType in ["regression", "regression_temporal"]:
+                if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
 
                 # Base training pass
@@ -166,7 +195,7 @@ class Network_Class:
                     max_doppler = max_doppler.to(self.device)
                     labels = labels.to(self.device)
 
-                    if self.predictionType in ["regression", "regression_temporal"]:
+                    if self.predictionType == "regression":
                         labels = labels.view(-1, 1)
 
                     outputs = self.model(image_magnitude, max_doppler)
@@ -193,7 +222,7 @@ class Network_Class:
     def test(self):
         self.model.eval()
 
-        if self.predictionType == "regression" or self.predictionType == "regression_temporal":
+        if self.predictionType == "regression":
             total_loss = 0.0
             total_samples = 0
             all_preds = []

@@ -19,6 +19,7 @@ from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
 from scipy.stats import skew, kurtosis, entropy
 from scipy.signal import find_peaks
 import cv2
+import yaml
 from utils import radar_toolbox as rtb
 
 
@@ -1479,3 +1480,90 @@ def train_and_evaluate_regression(model, features, labels, test_size=0.2, n_clas
     plt.show()
 
     return df_results
+
+
+def train_on_custom_folds(model, data_loader, feature_names, folds_path="folds_config.yaml"):
+    """
+    Entraîne un modèle de régression sur des splits train/test définis dans un fichier YAML,
+    charge dynamiquement les features/labels selon les expnames, et calcule la MSE moyenne.
+
+    Args:
+        model: Modèle de régression sklearn.
+        data_loader: Objet avec get_labels(exp_name=...), get_feature(namefeature, exp_name=...), get_max_values(exp_name=...).
+        feature_names: Liste des noms de features à utiliser.
+        folds_path (str): Chemin vers le fichier YAML des folds.
+
+    Returns:
+        mean_mse: MSE moyenne sur tous les folds.
+    """
+    with open(folds_path, "r") as f:
+        folds_config = yaml.safe_load(f)
+
+    all_y_test = []
+    all_y_pred = []
+    mse_list = []
+
+    for fold_idx, (fold_name, fold_data) in enumerate(folds_config["FOLDS"].items()):
+        print(f"\n📂 Fold {fold_idx + 1} — {fold_name}")
+
+        # Construction des noms d'expériences (NewExp1, NewExp2, etc.)
+        train_expnames = [f"NewExp{idx}" for idx in fold_data["TRAIN"]]
+        test_expnames = [f"NewExp{idx}" for idx in fold_data["TEST"]]
+
+        # 📌 Construction des features et labels pour TRAIN
+        X_train_list, y_train_list = [], []
+        for exp in train_expnames:
+            features = [data_loader.get_feature(name, exp_name=exp).reshape(-1, 1) for name in feature_names]
+            max_feat = data_loader.get_max_values(exp_name=exp).reshape(-1, 1)
+            X_train_list.append(np.concatenate(features + [max_feat], axis=1))
+            y_train_list.append(data_loader.get_labels(exp_name=exp).reshape(-1))
+
+        X_train = np.vstack(X_train_list)
+        y_train = np.concatenate(y_train_list)
+
+        # 📌 Construction des features et labels pour TEST
+        X_test_list, y_test_list = [], []
+        for exp in test_expnames:
+            features = [data_loader.get_feature(name, exp_name=exp).reshape(-1, 1) for name in feature_names]
+            max_feat = data_loader.get_max_values(exp_name=exp).reshape(-1, 1)
+            X_test_list.append(np.concatenate(features + [max_feat], axis=1))
+            y_test_list.append(data_loader.get_labels(exp_name=exp).reshape(-1))
+
+        X_test = np.vstack(X_test_list)
+        y_test = np.concatenate(y_test_list)
+
+        # 📌 Normalisation
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
+        # 📌 Entraînement et prédiction
+        model.fit(X_train, y_train)
+        y_pred = np.clip(model.predict(X_test), 0, None)
+
+        # 📌 Évaluation
+        mse = mean_squared_error(y_test, y_pred)
+        mse_list.append(mse)
+        print(f"📉 MSE Fold {fold_idx + 1}: {mse:.2f}")
+
+        all_y_test.extend(y_test)
+        all_y_pred.extend(y_pred)
+
+    # 📌 Visualisation
+    plt.figure(figsize=(8, 6))
+    plt.scatter(all_y_test, all_y_pred, alpha=0.1, label="Predicted vs True")
+    plt.plot([min(all_y_test), max(all_y_test)], [min(all_y_test), max(all_y_test)],
+             color="red", linestyle="--", label="Ideal Fit")
+    plt.xlabel("True Labels")
+    plt.ylabel("Predicted Labels")
+    plt.title(f"{model.__class__.__name__}: Predictions Across All Folds")
+    plt.xticks(np.arange(0, np.max(all_y_test) + 1))
+    plt.yticks(np.arange(0, np.max(all_y_test) + 1))
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    mean_mse = np.mean(mse_list)
+    print(f"\n🔢 MSE moyenne sur tous les folds: {mean_mse:.2f}")
+
+    return mean_mse
