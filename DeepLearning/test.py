@@ -44,6 +44,8 @@ if not os.path.isfile(yaml_path):
 with open(yaml_path, 'r') as stream:
     param = yaml.safe_load(stream)
 
+param["DATASET"]["FOLD_NUMBER"] = fold
+
 resultsPath = os.path.join("results", exp)
 os.makedirs(resultsPath, exist_ok=True)
 
