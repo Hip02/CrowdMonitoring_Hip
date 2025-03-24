@@ -517,3 +517,43 @@ def plot_learning_curves(train_losses, val_losses, results_path, title="Learning
     # Os make dir
     os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
     plt.savefig(results_path + "/_LearningCurves/learning_curve.pdf")
+
+def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path, title="Learning Curves"):
+    """
+    Plot multiple learning curves with average curves overlaid in bold.
+    
+    Args:
+        all_train_losses (List[List[float]]): List of train loss curves (each a list of losses per epoch).
+        all_val_losses (List[List[float]]): List of validation loss curves (each a list of losses per epoch).
+        results_path (str): Directory path to save the plot.
+        title (str): Title of the plot.
+    """
+    plt.figure(figsize=(12, 6))
+
+    # Convert to numpy arrays
+    all_train_losses = np.array(all_train_losses)
+    all_val_losses = np.array(all_val_losses)
+
+    # Plot individual curves
+    for train_curve in all_train_losses:
+        plt.plot(train_curve, color='blue', alpha=0.3)
+    for val_curve in all_val_losses:
+        plt.plot(val_curve, color='red', alpha=0.3)
+
+    # Plot average curves
+    mean_train = np.mean(all_train_losses, axis=0)
+    mean_val = np.mean(all_val_losses, axis=0)
+    plt.plot(mean_train, label="Mean Train Loss", color='blue', linewidth=2.5)
+    plt.plot(mean_val, label="Mean Validation Loss", color='red', linewidth=2.5)
+
+    # Plot formatting
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+
+    # Create directory and save figure
+    os.makedirs(os.path.join(results_path, "_LearningCurves"), exist_ok=True)
+    plt.savefig(os.path.join(results_path, "_LearningCurves", "learning_curve_multiple.pdf"))
+    plt.close()
