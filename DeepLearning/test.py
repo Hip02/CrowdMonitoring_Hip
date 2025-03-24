@@ -46,7 +46,7 @@ with open(yaml_path, 'r') as stream:
 
 param["DATASET"]["FOLD_NUMBER"] = fold
 
-resultsPath = os.path.join("results", exp)
+resultsPath = os.path.join("results", exp, f"fold{fold}")
 os.makedirs(resultsPath, exist_ok=True)
 
 data_loader = DataLoader(base_path, exp_list=all)
