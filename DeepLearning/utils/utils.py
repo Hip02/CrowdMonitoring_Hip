@@ -517,6 +517,7 @@ def plot_learning_curves(train_losses, val_losses, results_path, title="Learning
     # Os make dir
     os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
     plt.savefig(results_path + "/_LearningCurves/learning_curve.pdf")
+    plt.show()
 
 def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path, title="Learning Curves"):
     """

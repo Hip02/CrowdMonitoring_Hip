@@ -34,6 +34,7 @@ class Network_Class:
         self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         self.data_augm      = param["TRAINING"].get("DATA_AUGMENTATION", False)
+        self.resnet_type    = param["TRAINING"].get("RESNET_TYPE", "resnet18")
 
         # Data Loaders
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
@@ -49,7 +50,13 @@ class Network_Class:
             self.model = DopplerNetClassification(param).to(self.device)
             self.criterion = nn.CrossEntropyLoss()
         elif self.predictionType == "regression":
-            self.model = DopplerResNetRegression(param, layers=[2, 2, 2, 2]).to(self.device)
+
+            if self.resnet_type == "resnet18":
+                layers = [2, 2, 2, 2]
+            elif self.resnet_type == "resnet34":
+                layers = [3, 4, 6, 3]
+
+            self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
             self.criterion = nn.MSELoss()
 
         # Optimizer (initial LR is required for all schedulers)
