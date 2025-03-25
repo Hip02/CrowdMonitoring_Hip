@@ -9,7 +9,9 @@ local_destination = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip/
 # ---------------------
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
-subfolders = [f"Regression/ResNet_Folds/fold{i}" for i in range(1, 9)]
+local_destination = os.path.join(local_destination, "ResNet_Folds_OneCycleLR")
+os.makedirs(local_destination, exist_ok=True)
+subfolders = [f"Regression/ResNet_Folds_OneCycleLR/fold{i}" for i in [2,3,5,8]]
 
 for subfolder in subfolders :
 

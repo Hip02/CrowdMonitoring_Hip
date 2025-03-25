@@ -269,6 +269,9 @@ class Network_Class:
             plt.grid(True)
             plt.tight_layout()
 
+            # Add denorm_mse on the plot 
+            plt.text(0.95, 0.05, f"Denormalized MSE: {denorm_mse:.4f}", ha='right', va='bottom', transform=plt.gca().transAxes, color='red')
+
             # Os make dir
             createFolder(self.resultsPath + "/_Predictions/")
             plt.savefig(self.resultsPath + "/_Predictions/predictions.pdf")
