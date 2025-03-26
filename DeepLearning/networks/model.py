@@ -20,6 +20,10 @@ import torchvision.transforms.functional as TF
 
 from networks.data_augment import DataAugmentor
 
+# Fix seed
+torch.manual_seed(42)
+np.random.seed(42)
+
 def createFolder(desiredPath): 
     if not os.path.exists(desiredPath):
         os.makedirs(desiredPath)
@@ -40,6 +44,8 @@ class Network_Class:
 
         if param.get("augmentation", None) is not None:
             self.data_augm = True
+        else:
+            self.data_augm = False
 
         # Data Loaders
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
@@ -353,43 +359,50 @@ class Network_Class:
 
     def visualize_data_augmentation(self, num_images=4):
         """
-        Affiche les images originales et leurs versions augmentées pour inspection visuelle.
-        
-        Args:
-            num_images (int): Nombre d’images à visualiser (maximum : batch size).
-        """
-        print("🎨 Visualizing Data Augmentation")
+        Affiche les images originales et leurs versions augmentées côte à côte.
 
-        # Prendre un batch du DataLoader d'entraînement
-        image_magnitude, max_doppler, labels = next(iter(self.trainDataLoader))
+        Args:
+            data_augmentor: instance de DataAugmentor avec méthode .apply()
+            dataloader: DataLoader contenant les images d'entrée
+            num_images (int): nombre de lignes (chaque ligne = original + augmentée)
+        """
+        print("🎨 Visualizing Data Augmentation (original vs augmented)")
+
+        # Check if data augmentation is enabled
+        if not self.data_augm:
+            print("Data augmentation is not enabled in the configuration file.")
+            return
+
+        data_augmentor = DataAugmentor(config=self.config)
+
+        # Récupérer un batch
+        image_magnitude, _, _ = next(iter(self.trainDataLoader))
 
         # Ne pas dépasser la taille du batch
         num_images = min(num_images, image_magnitude.shape[0])
 
-        # Appliquer les augmentations sur les premières images
+        # Sélection des images à afficher
         images_to_show = image_magnitude[:num_images]
-        augm_lists = [self.apply_data_augmentation(img.unsqueeze(0))[0:4] for img in images_to_show]
 
-        # Convertir les originaux en numpy
+        # Appliquer les augmentations
+        augmented_images = torch.stack([data_augmentor.apply(img.unsqueeze(0)).squeeze(0) for img in images_to_show])
+
+        # Passage en numpy
         originals = images_to_show.cpu().numpy()
+        augmenteds = augmented_images.cpu().numpy()
 
-        # Figure : Original + 4 augmentations pour chaque image
-        fig, axes = plt.subplots(num_images, 5, figsize=(15, 3 * num_images))
-        if num_images == 1:
-            axes = [axes]  # Si une seule ligne
-
+        # Création de la figure
+        fig, axes = plt.subplots(num_images, 2, figsize=(6, 3 * num_images))
         for i in range(num_images):
-            # Image originale
+            # Original
             axes[i][0].imshow(originals[i][0], cmap='gray')
             axes[i][0].set_title("Original")
             axes[i][0].axis("off")
 
-            # Augmentations
-            for j in range(4):
-                aug_img = augm_lists[i][j][0].cpu().numpy()
-                axes[i][j + 1].imshow(aug_img.squeeze(), cmap='gray')
-                axes[i][j + 1].set_title(f"Augm {j+1}")
-                axes[i][j + 1].axis("off")
+            # Augmentée
+            axes[i][1].imshow(augmenteds[i][0], cmap='gray')
+            axes[i][1].set_title("Augmented")
+            axes[i][1].axis("off")
 
         plt.tight_layout()
         plt.show()

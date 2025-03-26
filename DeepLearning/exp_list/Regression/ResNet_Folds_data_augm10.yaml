@@ -1,0 +1,32 @@
+---
+DATASET:
+  FOLD_NUMBER: 0
+
+MODEL:
+  NB_CHANNELS: 64
+
+TRAINING: 
+  PREDICTION_TYPE: regression
+  LEARNING_RATE: 0.0001
+  EPOCH: 25
+  BATCH_SIZE: 16
+  DEVICE: cuda 
+
+
+augmentation:
+  flip_rotation:
+    enable: true
+    prob_apply: 0.5
+
+  color:
+    enable: true
+    prob_apply: 0.5
+    brightness: [1.25, 1.65] 
+    contrast: [1.25, 1.65]
+
+  noise_blur:
+    enable: true
+    prob_apply: 0.5
+    prob_noise_vs_blur: 0.5
+    gaussian_noise_std: [0.01, 0.02]
+    blur_std: [2.5, 3.0]

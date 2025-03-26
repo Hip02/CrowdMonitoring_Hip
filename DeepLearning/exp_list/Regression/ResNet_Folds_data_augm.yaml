@@ -22,8 +22,8 @@ augmentation:
   color:
     enable: true
     prob_apply: 0.6  # 60% de chances d’appliquer une modif brightness/contrast
-    brightness: [0.8, 1.2]  # facteur aléatoire entre 0.8x et 1.2x
-    contrast: [0.8, 1.2]
+    brightness: [1.5, 4.0]  # facteur aléatoire entre a et b
+    contrast: [1.5, 4.0]
 
   noise_blur:
     enable: true

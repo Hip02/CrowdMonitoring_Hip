@@ -34,12 +34,14 @@ class DataAugmentor:
         # --- Noise / Blur ---
         if self.cfg['noise_blur']['enable'] and random.random() < self.cfg['noise_blur']['prob_apply']:
             if random.random() < self.cfg['noise_blur']['prob_noise_vs_blur']:
-                std = self.cfg['noise_blur']['gaussian_noise_std']
+                gmin, gmax = self.cfg['noise_blur']['gaussian_noise_std']
+                std = random.uniform(gmin, gmax)
                 noise = torch.randn_like(img) * std
                 img = img + noise
             else:
-                sigma = self.cfg['noise_blur']['blur_radius']
-                kernel_size = 3 if sigma <= 1 else 5
+                bmin, bmax = self.cfg['noise_blur']['blur_std']
+                sigma = random.uniform(bmin, bmax)
+                kernel_size = max(3, int(2 * round(sigma * 2) + 1))
                 blur = T.GaussianBlur(kernel_size=kernel_size, sigma=sigma)
                 img = blur(img)
 
