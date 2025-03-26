@@ -12,37 +12,17 @@ class DataAugmentor:
 
         # --- Flip / Rotation ---
         if self.cfg['flip_rotation']['enable'] and random.random() < self.cfg['flip_rotation']['prob_apply']:
-            mode = self.cfg['flip_rotation'].get('mode', 'flip')
-            if mode == 'flip':
-                img = TF.hflip(img) if random.random() < 0.5 else TF.vflip(img)
-            elif mode == 'flip90':
-                img = torch.rot90(img, k=random.choice([1,2,3]), dims=[1,2])
-            elif mode == 'rotate15':
-                angle = random.uniform(-15, 15)
-                # Appliquer la rotation image par image
-                if img.ndim == 4:  # batch [B, C, H, W]
-                    rotated = []
-                    for im in img:
-                        im = im.squeeze(0) if im.shape[0] == 1 else im  # [H, W] si mono-canal
-                        if im.ndim == 2:
-                            im = im.unsqueeze(0)  # [1, H, W]
-                        im_rot = TF.rotate(im,
-                                        angle=angle,
-                                        interpolation=TF.InterpolationMode.BILINEAR,
-                                        expand=False,
-                                        fill=0.0)
-                        rotated.append(im_rot)
-                    img = torch.stack(rotated)
-                else:
-                    if img.shape[0] == 1 and img.ndim == 3:
-                        # [1, H, W] image mono-canal
-                        img = TF.rotate(img,
-                                        angle=angle,
-                                        interpolation=TF.InterpolationMode.BILINEAR,
-                                        expand=False,
-                                        fill=0.0)
-                    else:
-                        raise ValueError(f"Unsupported shape for rotation: {img.shape}")
+            flip_ops = ['hflip', 'vflip', 'rot90']
+            op = random.choice(flip_ops)
+
+            if op == 'hflip':
+                img = TF.hflip(img)
+            elif op == 'vflip':
+                img = TF.vflip(img)
+            elif op == 'rot90':
+                # Choix d'un nombre de rotations aléatoire (1, 2, ou 3 fois 90°)
+                k = random.choice([1, 2, 3])
+                img = torch.rot90(img, k=k, dims=[-2, -1])  # dernière dim = H, W
 
         # --- Brightness / Contrast ---
         if self.cfg['color']['enable'] and random.random() < self.cfg['color']['prob_apply']:

@@ -17,18 +17,17 @@ TRAINING:
 augmentation:
   flip_rotation:
     enable: true
-    prob_apply: 0.5
-    mode: "flip90"
+    prob_apply: 0.5  # 50% de chances d’appliquer une transformation de type flip/rotation
 
   color:
     enable: true
-    prob_apply: 0.5
-    brightness: [0.9, 1.1]
-    contrast: [0.9, 1.1]
+    prob_apply: 0.6  # 60% de chances d’appliquer une modif brightness/contrast
+    brightness: [0.8, 1.2]  # facteur aléatoire entre 0.8x et 1.2x
+    contrast: [0.8, 1.2]
 
   noise_blur:
     enable: true
-    prob_apply: 0.5         # Applique une transformation de cette catégorie ?
-    prob_noise_vs_blur: 0.5 # Si oui, choisit bruit (p) vs blur (1-p)
+    prob_apply: 0.4  # 40% de chances d’appliquer soit un bruit, soit un flou
+    prob_noise_vs_blur: 0.5  # 50% chance d'ajouter un bruit, 50% un flou
     gaussian_noise_std: 0.01
     blur_radius: 1.5
