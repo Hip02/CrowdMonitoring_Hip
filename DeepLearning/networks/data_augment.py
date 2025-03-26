@@ -19,18 +19,30 @@ class DataAugmentor:
                 img = torch.rot90(img, k=random.choice([1,2,3]), dims=[1,2])
             elif mode == 'rotate15':
                 angle = random.uniform(-15, 15)
-                # Appliquer la rotation image par image si batch
-                if img.ndim == 4:
-                    img = torch.stack([
-                        TF.rotate(im, angle=angle,
-                                  interpolation=TF.InterpolationMode.BILINEAR,
-                                  expand=False, fill=0.0)
-                        for im in img
-                    ])
+                # Appliquer la rotation image par image
+                if img.ndim == 4:  # batch [B, C, H, W]
+                    rotated = []
+                    for im in img:
+                        im = im.squeeze(0) if im.shape[0] == 1 else im  # [H, W] si mono-canal
+                        if im.ndim == 2:
+                            im = im.unsqueeze(0)  # [1, H, W]
+                        im_rot = TF.rotate(im,
+                                        angle=angle,
+                                        interpolation=TF.InterpolationMode.BILINEAR,
+                                        expand=False,
+                                        fill=0.0)
+                        rotated.append(im_rot)
+                    img = torch.stack(rotated)
                 else:
-                    img = TF.rotate(img, angle=angle,
-                                    interpolation=TF.InterpolationMode.BILINEAR,
-                                    expand=False, fill=0.0)
+                    if img.shape[0] == 1 and img.ndim == 3:
+                        # [1, H, W] image mono-canal
+                        img = TF.rotate(img,
+                                        angle=angle,
+                                        interpolation=TF.InterpolationMode.BILINEAR,
+                                        expand=False,
+                                        fill=0.0)
+                    else:
+                        raise ValueError(f"Unsupported shape for rotation: {img.shape}")
 
         # --- Brightness / Contrast ---
         if self.cfg['color']['enable'] and random.random() < self.cfg['color']['prob_apply']:

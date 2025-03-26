@@ -17,7 +17,7 @@ TRAINING:
 augmentation:
   flip_rotation:
     enable: true
-    prob_apply: 0.0
+    prob_apply: 0.5
     mode: "flip90"
 
   color:
