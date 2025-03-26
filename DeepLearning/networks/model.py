@@ -18,6 +18,8 @@ import torch.nn as nn
 import torch.optim
 import torchvision.transforms.functional as TF
 
+from networks.data_augment import DataAugmentor
+
 def createFolder(desiredPath): 
     if not os.path.exists(desiredPath):
         os.makedirs(desiredPath)
@@ -25,6 +27,7 @@ def createFolder(desiredPath):
 class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
         self.resultsPath    = resultsPath
+        self.config         = param
         self.epoch          = param["TRAINING"]["EPOCH"]
         self.device         = param["TRAINING"]["DEVICE"]
         self.lr             = param["TRAINING"].get("LEARNING_RATE", None)
@@ -33,8 +36,10 @@ class Network_Class:
         self.gamma          = param["TRAINING"].get("LR_GAMMA", None)
         self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
-        self.data_augm      = param["TRAINING"].get("DATA_AUGMENTATION", False)
         self.resnet_type    = param["TRAINING"].get("RESNET_TYPE", "resnet18")
+        
+        if param.get(["augmentation"], None) is not None:
+            self.data_augm = True
 
         # Data Loaders
         self.dataSetTrain = DopplerDataset(data_loader, mode='train', param=param, sub_sample_factor=sub_sample_factor)
@@ -115,29 +120,6 @@ class Network_Class:
     def loadWeight(self):
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
-    def apply_data_augmentation(self, x):
-
-        def add_gaussian_noise(img, mean=0.0, std=0.01):
-            noise = torch.randn_like(img) * std + mean
-            return img + noise
-
-        transforms = [
-            lambda img: add_gaussian_noise(img),
-            lambda img: TF.hflip(img),
-            lambda img: TF.vflip(img),
-            lambda img: add_gaussian_noise(TF.hflip(img)),
-        ]
-
-        """
-        transforms = [
-            lambda img: TF.vflip(img),
-            lambda img: TF.hflip(TF.vflip(img)),
-            lambda img: TF.adjust_brightness(TF.vflip(img), brightness_factor=1.3),
-            lambda img: TF.adjust_contrast(TF.vflip(img), contrast_factor=1.5),
-        ]
-        """
-        return [transform(x.clone()) for transform in transforms]
-
     def train(self):
         best_loss = np.Inf
         val_losses = []
@@ -158,6 +140,10 @@ class Network_Class:
                 max_doppler = max_doppler.to(self.device)
                 labels = labels.to(self.device)
 
+                if self.data_augm:
+                    data_augmentor = DataAugmentor(config=self.config)
+                    image_magnitude = data_augmentor.apply(image_magnitude)
+
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
 
@@ -171,20 +157,6 @@ class Network_Class:
                 train_loss += loss.item() * labels.size(0)
                 total_train_samples += labels.size(0)
                 progress_bar.update(1)
-
-                # Additional augmentation passes
-                if self.data_augm:
-                    aug_batches = self.apply_data_augmentation(image_magnitude)
-                    for aug_img in aug_batches:
-                        self.optimizer.zero_grad()
-                        outputs = self.model(aug_img.to(self.device), max_doppler)
-                        loss_aug = self.criterion(outputs, labels)
-                        loss_aug.backward()
-                        self.optimizer.step()
-
-                        train_loss += loss_aug.item() * labels.size(0)
-                        total_train_samples += labels.size(0)
-                        progress_bar.update(1)
 
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
