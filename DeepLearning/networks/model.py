@@ -130,9 +130,7 @@ class Network_Class:
             train_loss = 0.0
             total_train_samples = 0
 
-            # Compute total steps for progress bar (base + augmented)
-            aug_factor = 1 + (4 if self.data_augm else 0)
-            total_steps = len(self.trainDataLoader) * aug_factor
+            total_steps = len(self.trainDataLoader)
             progress_bar = tqdm(total=total_steps, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
 
             for image_magnitude, max_doppler, labels in self.trainDataLoader:
@@ -140,9 +138,13 @@ class Network_Class:
                 max_doppler = max_doppler.to(self.device)
                 labels = labels.to(self.device)
 
+                print(image_magnitude.shape)
+
                 if self.data_augm:
                     data_augmentor = DataAugmentor(config=self.config)
                     image_magnitude = data_augmentor.apply(image_magnitude)
+                
+                print(image_magnitude.shape)
 
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
