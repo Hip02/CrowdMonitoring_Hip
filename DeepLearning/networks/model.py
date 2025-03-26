@@ -37,8 +37,8 @@ class Network_Class:
         self.batchSize      = param["TRAINING"]["BATCH_SIZE"]
         self.predictionType = param["TRAINING"]["PREDICTION_TYPE"]
         self.resnet_type    = param["TRAINING"].get("RESNET_TYPE", "resnet18")
-        
-        if param.get(["augmentation"], None) is not None:
+
+        if param.get("augmentation", None) is not None:
             self.data_augm = True
 
         # Data Loaders
