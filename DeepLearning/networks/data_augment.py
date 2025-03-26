@@ -19,7 +19,18 @@ class DataAugmentor:
                 img = torch.rot90(img, k=random.choice([1,2,3]), dims=[1,2])
             elif mode == 'rotate15':
                 angle = random.uniform(-15, 15)
-                img = TF.rotate(img, angle=angle, interpolation=TF.InterpolationMode.BILINEAR, expand=False, fill=0.0)
+                # Appliquer la rotation image par image si batch
+                if img.ndim == 4:
+                    img = torch.stack([
+                        TF.rotate(im, angle=angle,
+                                  interpolation=TF.InterpolationMode.BILINEAR,
+                                  expand=False, fill=0.0)
+                        for im in img
+                    ])
+                else:
+                    img = TF.rotate(img, angle=angle,
+                                    interpolation=TF.InterpolationMode.BILINEAR,
+                                    expand=False, fill=0.0)
 
         # --- Brightness / Contrast ---
         if self.cfg['color']['enable'] and random.random() < self.cfg['color']['prob_apply']:
@@ -31,16 +42,13 @@ class DataAugmentor:
         # --- Noise / Blur ---
         if self.cfg['noise_blur']['enable'] and random.random() < self.cfg['noise_blur']['prob_apply']:
             if random.random() < self.cfg['noise_blur']['prob_noise_vs_blur']:
-                # Gaussian noise
                 std = self.cfg['noise_blur']['gaussian_noise_std']
                 noise = torch.randn_like(img) * std
                 img = img + noise
             else:
-                # Gaussian blur via torchvision
                 sigma = self.cfg['noise_blur']['blur_radius']
                 kernel_size = 3 if sigma <= 1 else 5
                 blur = T.GaussianBlur(kernel_size=kernel_size, sigma=sigma)
                 img = blur(img)
-
 
         return img
