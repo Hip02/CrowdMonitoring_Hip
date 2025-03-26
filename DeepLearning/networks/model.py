@@ -138,14 +138,9 @@ class Network_Class:
                 max_doppler = max_doppler.to(self.device)
                 labels = labels.to(self.device)
 
-                print("\n\n\n")
-                print(f"Before : {image_magnitude.shape}")
-
                 if self.data_augm:
                     data_augmentor = DataAugmentor(config=self.config)
                     image_magnitude = data_augmentor.apply(image_magnitude)
-                print("\n\n\n")
-                print(f"After : {image_magnitude.shape}")
 
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
