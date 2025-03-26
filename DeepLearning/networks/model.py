@@ -139,13 +139,13 @@ class Network_Class:
                 labels = labels.to(self.device)
 
                 print("\n\n\n")
-                print(image_magnitude.shape)
+                print(f"Before : {image_magnitude.shape}")
 
                 if self.data_augm:
                     data_augmentor = DataAugmentor(config=self.config)
                     image_magnitude = data_augmentor.apply(image_magnitude)
                 print("\n\n\n")
-                print(image_magnitude.shape)
+                print(f"After : {image_magnitude.shape}")
 
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
