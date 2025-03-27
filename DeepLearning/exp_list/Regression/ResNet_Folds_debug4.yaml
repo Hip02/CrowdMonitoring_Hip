@@ -1,6 +1,7 @@
 ---
 DATASET:
   FOLD_NUMBER: 0
+  FORCE_MAX_TO_0 : true
 
 MODEL:
   NB_CHANNELS: 64
@@ -8,6 +9,26 @@ MODEL:
 TRAINING: 
   PREDICTION_TYPE: regression
   LEARNING_RATE: 0.0001
+  RESNET_TYPE: resnet_XS
   EPOCH: 20
   BATCH_SIZE: 16
   DEVICE: cuda 
+
+
+augmentation:
+  flip_rotation:
+    enable: true
+    prob_apply: 0.5
+
+  color:
+    enable: true
+    prob_apply: 0.5
+    brightness: [1.65, 2.4]
+    contrast: [1.65, 2.4]
+
+  noise_blur:
+    enable: true
+    prob_apply: 0.5
+    prob_noise_vs_blur: 0.5
+    gaussian_noise_std: [0.02, 0.05]
+    blur_std: [3.0, 4.0]
