@@ -462,8 +462,6 @@ class DopplerDataset(Dataset):
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
 
-        print(max_tensor)
-
         label_tensor = self._load_label(exp_name, image_index)
 
         return img_tensor, max_tensor, label_tensor
