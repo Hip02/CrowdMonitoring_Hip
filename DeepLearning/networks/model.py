@@ -66,6 +66,8 @@ class Network_Class:
                 layers = [2, 2, 2, 2]
             elif self.resnet_type == "resnet34":
                 layers = [3, 4, 6, 3]
+            elif self.resnet_type == "resnet_XS":
+                layers = [1, 1, 1, 1]
 
             self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
             self.criterion = nn.MSELoss()

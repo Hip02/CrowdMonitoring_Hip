@@ -263,6 +263,7 @@ class DopplerDataset(Dataset):
         if self.predictionType == "classification":
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
         
+        self.force_max_to_0 = param["DATASET"].get("FORCE_MAX_TO_0", False)
         self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
         self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
 
@@ -456,7 +457,13 @@ class DopplerDataset(Dataset):
         else:
             img_tensor = torch.tensor(np.array(img_stack))
 
+        if self.force_max_to_0:
+            max_stack = [0] * len(max_stack)
+
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
+
+        print(max_tensor)
+
         label_tensor = self._load_label(exp_name, image_index)
 
         return img_tensor, max_tensor, label_tensor

@@ -10,8 +10,8 @@ local_destinations = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
 local_destinations = os.path.join(local_destinations, "ResNet_Folds_data_augm")
-local_destinations = [f"{local_destinations}{i}" for i in [2,3,4,5,6,7,8,9,10]]
-subfolders = [f"Regression/ResNet_Folds_data_augm{i}/fold5" for i in [2,3,4,5,6,7,8,9,10]]
+local_destinations = [f"{local_destinations}{i}" for i in  [11, 12, 13]]
+subfolders = [f"Regression/ResNet_Folds_data_augm{i}/fold5" for i in [11, 12, 13]]
 
 for local_dest, subfolder in zip(local_destinations, subfolders):
     # --- Construction des chemins distants et locaux ---
