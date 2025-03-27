@@ -504,7 +504,7 @@ class DopplerDataset(Dataset):
             return torch.tensor([label], dtype=torch.float32)
 
     
-def plot_learning_curves(train_losses, val_losses, results_path, title="Learning Curves"):
+def plot_learning_curves(train_losses, val_losses, results_path, file_name="learning_curve",title="Learning Curves"):
     """Plot the learning curves of a training session."""
     plt.figure(figsize=(12, 6))
     plt.plot(train_losses, label="Train Loss", color='blue')
@@ -516,7 +516,7 @@ def plot_learning_curves(train_losses, val_losses, results_path, title="Learning
     plt.grid(True)
     # Os make dir
     os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
-    plt.savefig(results_path + "/_LearningCurves/learning_curve.pdf")
+    plt.savefig(results_path + f"/_LearningCurves/{file_name}.pdf")
     plt.show()
 
 def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path, title="Learning Curves"):
