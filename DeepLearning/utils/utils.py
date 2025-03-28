@@ -264,6 +264,8 @@ class DopplerDataset(Dataset):
             self.nb_classes = param["DATASET"]["NB_CLASSES"]
         
         self.force_max_to_0 = param["DATASET"].get("FORCE_MAX_TO_0", False)
+        self.standardize_labels = param["DATASET"].get("STANDARDIZE_LABELS", True)
+
         self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
         self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
 
@@ -506,7 +508,8 @@ class DopplerDataset(Dataset):
             label = self._convert_label_to_class(label)
             return torch.tensor(label, dtype=torch.long)
         else:
-            #label = (label - self.mean_label) / self.std_label
+            if self.standardize_labels:
+                label = (label - self.mean_label) / self.std_label
             return torch.tensor([label], dtype=torch.float32)
 
     
@@ -521,9 +524,9 @@ def plot_learning_curves(train_losses, val_losses, results_path, file_name="lear
     plt.legend()
     plt.grid(True)
     # Os make dir
-    y_min = 0
-    y_max = 0.5
-    plt.ylim(y_min, y_max)
+    #y_min = 0
+    #y_max = 0.5
+    #plt.ylim(y_min, y_max)
 
     os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
     plt.savefig(results_path + f"/_LearningCurves/{file_name}.pdf")
