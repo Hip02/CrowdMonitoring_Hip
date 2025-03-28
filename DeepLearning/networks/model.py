@@ -70,7 +70,7 @@ class Network_Class:
             elif self.resnet_type == "resnet_XS":
                 layers = [1, 1, 1, 1]
                 
-            self.model = DebugResNet().to(self.device)
+            self.model = DebugResNet(param).to(self.device)
             self.criterion = nn.MSELoss()
 
             #self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
