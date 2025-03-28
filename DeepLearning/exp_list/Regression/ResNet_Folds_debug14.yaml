@@ -1,0 +1,28 @@
+---
+DATASET:
+  FOLD_NUMBER: 0
+  STANDARDIZE_LABELS: true
+MODEL:
+  NB_CHANNELS: 3
+  PRETRAINED: true
+  USE_PREV_FRAMES: True
+  NB_PREV_FRAMES: 2
+  TIME_STEPS : 2
+
+TRAINING: 
+  PREDICTION_TYPE: regression
+  LEARNING_RATE: 0.0001
+  EPOCH: 50
+  BATCH_SIZE: 16
+  DEVICE: cuda
+
+augmentation:
+  flip_rotation:
+    enable: true
+    prob_apply: 0.5
+
+  color:
+    enable: false
+  
+  noise_blur:
+    enable: false

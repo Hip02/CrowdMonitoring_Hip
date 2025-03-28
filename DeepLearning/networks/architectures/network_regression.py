@@ -11,15 +11,16 @@ import torchvision
 
 
 class DebugResNet(nn.Module):
-    def __init__(self, param, in_channels=1):
+    def __init__(self, param):
 
         self.pretrained = param["MODEL"].get("PRETRAINED", False)
+        self.in_channels = param["MODEL"].get("NB_CHANNELS", 1)
 
         super(DebugResNet, self).__init__()
 
         self.model = torchvision.models.resnet18(pretrained=self.pretrained)
 
-        self.model.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.model.conv1 = nn.Conv2d(self.in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.model.fc = nn.Linear(self.model.fc.in_features, 1)
 
     def forward(self, x):
