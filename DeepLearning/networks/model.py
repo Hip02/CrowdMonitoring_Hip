@@ -182,9 +182,10 @@ class Network_Class:
 
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
+            """
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
-
+            """
             # Validation
             self.model.eval()
             val_loss = 0.0
