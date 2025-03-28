@@ -70,7 +70,7 @@ class Network_Class:
             elif self.resnet_type == "resnet_XS":
                 layers = [1, 1, 1, 1]
                 
-            self.model = DebugResNet()
+            self.model = DebugResNet().to(self.device)
             self.criterion = nn.MSELoss()
 
             #self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
@@ -305,10 +305,10 @@ class Network_Class:
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (classification)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
-                    max_doppler = max_doppler.to(self.device)
+                    #max_doppler = max_doppler.to(self.device)
                     labels = labels.to(self.device)
 
-                    outputs = self.model(image_magnitude, max_doppler)
+                    outputs = self.model(image_magnitude) #, max_doppler)
                     _, preds = torch.max(outputs, 1)
 
                     correct_predictions += (preds == labels).sum().item()
