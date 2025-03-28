@@ -161,6 +161,15 @@ class Network_Class:
                 self.optimizer.zero_grad()
                 ### DEBUG ###
                 outputs = self.model(image_magnitude)
+
+                # Compute stats about the batch
+                print(f"[TRAIN] Image Min: {image_magnitude.min():.4f}, Max: {image_magnitude.max():.4f}")
+                print(f"[TRAIN] Median : {image_magnitude.median():.4f}, Mean: {image_magnitude.mean():.4f}")
+                print(f"[TRAIN] Labels Min: {labels.min():.4f}, Max: {labels.max():.4f}")
+                print(f"[TRAIN] Median : {labels.median():.4f}, Mean: {labels.mean():.4f}")
+
+                # DEBUG : Early stopping
+                break
                 #outputs = self.model(image_magnitude, max_doppler)
 
                 loss = self.criterion(outputs, labels)
@@ -192,6 +201,13 @@ class Network_Class:
 
                     ### DEBUG ###
                     outputs = self.model(image_magnitude)
+
+                    # Compute stats about the batch
+                    print(f"[VAL] Image Min: {image_magnitude.min():.4f}, Max: {image_magnitude.max():.4f}")
+                    print(f"[VAL] Median : {image_magnitude.median():.4f}, Mean: {image_magnitude.mean():.4f}")
+                    print(f"[VAL] Labels Min: {labels.min():.4f}, Max: {labels.max():.4f}")
+                    print(f"[VAL] Median : {labels.median():.4f}, Mean: {labels.mean():.4f}")
+                    
                     #outputs = self.model(image_magnitude, max_doppler)
 
                     loss = self.criterion(outputs, labels)

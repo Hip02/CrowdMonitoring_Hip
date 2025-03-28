@@ -285,6 +285,7 @@ class DopplerDataset(Dataset):
             self.min_label, self.max_label = self._compute_label_range()
         else:
             self.mean_label, self.std_label = self._compute_label_stats()
+            print(colored(f"Label stats: mean={self.mean_label}, std={self.std_label}", "yellow"))
 
         # Statistiques max_values et max_values2
         self.mean_max_values = np.mean(self.data_loader.get_max_values())
