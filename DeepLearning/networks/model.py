@@ -214,6 +214,7 @@ class Network_Class:
                     val_loss += loss.item() * labels.size(0)
                     total_val_samples += labels.size(0)
 
+            """
             mean_val_loss = val_loss / total_val_samples
             val_losses.append(mean_val_loss)
 
@@ -226,7 +227,7 @@ class Network_Class:
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
                 print("Model saved")
-
+            """
         return train_losses, val_losses
 
     
