@@ -506,7 +506,7 @@ class DopplerDataset(Dataset):
             label = self._convert_label_to_class(label)
             return torch.tensor(label, dtype=torch.long)
         else:
-            label = (label - self.mean_label) / self.std_label
+            #label = (label - self.mean_label) / self.std_label
             return torch.tensor([label], dtype=torch.float32)
 
     

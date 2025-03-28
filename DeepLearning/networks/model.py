@@ -161,15 +161,6 @@ class Network_Class:
                 self.optimizer.zero_grad()
                 ### DEBUG ###
                 outputs = self.model(image_magnitude)
-
-                # Compute stats about the batch
-                print(f"[TRAIN] Image Min: {image_magnitude.min():.4f}, Max: {image_magnitude.max():.4f}")
-                print(f"[TRAIN] Median : {image_magnitude.median():.4f}, Mean: {image_magnitude.mean():.4f}")
-                print(f"[TRAIN] Labels Min: {labels.min():.4f}, Max: {labels.max():.4f}")
-                print(f"[TRAIN] Median : {labels.median():.4f}, Mean: {labels.mean():.4f}")
-
-                # DEBUG : Early stopping
-                break
                 #outputs = self.model(image_magnitude, max_doppler)
 
                 loss = self.criterion(outputs, labels)
@@ -182,10 +173,10 @@ class Network_Class:
 
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
-            """
+            
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
-            """
+            
             # Validation
             self.model.eval()
             val_loss = 0.0
@@ -202,22 +193,13 @@ class Network_Class:
 
                     ### DEBUG ###
                     outputs = self.model(image_magnitude)
-
-                    # Compute stats about the batch
-                    print(f"[VAL] Image Min: {image_magnitude.min():.4f}, Max: {image_magnitude.max():.4f}")
-                    print(f"[VAL] Median : {image_magnitude.median():.4f}, Mean: {image_magnitude.mean():.4f}")
-                    print(f"[VAL] Labels Min: {labels.min():.4f}, Max: {labels.max():.4f}")
-                    print(f"[VAL] Median : {labels.median():.4f}, Mean: {labels.mean():.4f}")
-
-                    # DEBUG : Early stopping
-                    break
                     #outputs = self.model(image_magnitude, max_doppler)
 
                     loss = self.criterion(outputs, labels)
                     val_loss += loss.item() * labels.size(0)
                     total_val_samples += labels.size(0)
 
-            """
+            
             mean_val_loss = val_loss / total_val_samples
             val_losses.append(mean_val_loss)
 
@@ -230,7 +212,7 @@ class Network_Class:
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
                 print("Model saved")
-            """
+            
         return train_losses, val_losses
 
     
