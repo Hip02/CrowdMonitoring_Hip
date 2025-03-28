@@ -7,6 +7,7 @@ import copy
 
 from networks.architectures.network_classification import DopplerNetClassification
 from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
+from networks.architectures.network_regression import DebugResNet
 from utils.utils import DopplerDataset
 import seaborn as sns
 from termcolor import colored
@@ -68,9 +69,12 @@ class Network_Class:
                 layers = [3, 4, 6, 3]
             elif self.resnet_type == "resnet_XS":
                 layers = [1, 1, 1, 1]
+                
+            self.model = DebugResNet()
+            self.criterion = nn.MSELoss()
 
             self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
-            self.criterion = nn.MSELoss()
+            #self.criterion = nn.MSELoss()
 
         # Optimizer (initial LR is required for all schedulers)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
