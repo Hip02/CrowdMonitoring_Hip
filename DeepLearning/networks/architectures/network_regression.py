@@ -17,9 +17,13 @@ class DebugResNet(nn.Module):
         self.model = torchvision.models.resnet18()
 
         self.model.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        self.regression = nn.Linear(1000, 1)
     
     def forward(self, x):
-        return self.model(x)
+        x = self.model(x)
+        x = F.relu(self.regression(self.x)) 
+        return x
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None, dilation=1):
