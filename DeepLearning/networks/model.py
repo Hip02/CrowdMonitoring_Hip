@@ -73,7 +73,7 @@ class Network_Class:
             self.model = DebugResNet()
             self.criterion = nn.MSELoss()
 
-            self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
+            #self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
             #self.criterion = nn.MSELoss()
 
         # Optimizer (initial LR is required for all schedulers)
@@ -162,7 +162,7 @@ class Network_Class:
                 ### DEBUG ###
                 outputs = self.model(image_magnitude)
                 #outputs = self.model(image_magnitude, max_doppler)
-                
+
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
