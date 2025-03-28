@@ -208,7 +208,9 @@ class Network_Class:
                     print(f"[VAL] Median : {image_magnitude.median():.4f}, Mean: {image_magnitude.mean():.4f}")
                     print(f"[VAL] Labels Min: {labels.min():.4f}, Max: {labels.max():.4f}")
                     print(f"[VAL] Median : {labels.median():.4f}, Mean: {labels.mean():.4f}")
-                    
+
+                    # DEBUG : Early stopping
+                    break
                     #outputs = self.model(image_magnitude, max_doppler)
 
                     loss = self.criterion(outputs, labels)
