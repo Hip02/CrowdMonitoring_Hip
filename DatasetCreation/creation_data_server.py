@@ -47,16 +47,16 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
         save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesCropped")
         #save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")
-        #max_values.append(radar_data['magnitudes'][i].max())
-        #min_values.append(radar_data['magnitudes'][i].min())
+        max_values.append(radar_data['magnitudes'][i].max())
+        min_values.append(radar_data['magnitudes'][i].min())
 
     # Save max values for antenna 1 as a numpy array into a new folder
-    os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesAntenna{antenna_i}", exist_ok=True)
-    np.save(f"{base_path}/{exp_names[f]}/MaxValuesAntenna{antenna_i}/max_values.npy", np.array(max_values))
+    os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesCropped", exist_ok=True)
+    np.save(f"{base_path}/{exp_names[f]}MaxValuesCropped/max_values.npy", np.array(max_values))
 
     # Save min values for antenna 1 as a numpy array into a new folder
-    os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesAntenna{antenna_i}", exist_ok=True)
-    np.save(f"{base_path}/{exp_names[f]}/MinValuesAntenna{antenna_i}/min_values.npy", np.array(min_values))
+    os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesCropped", exist_ok=True)
+    np.save(f"{base_path}/{exp_names[f]}/MinValuesCropped/min_values.npy", np.array(min_values))
 
     # Save the labels as a numpy array into a new folder
     #os.makedirs(f"{base_path}/{exp_names[f]}/Labels", exist_ok=True)
@@ -74,7 +74,7 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     del radar_data
     #del video_data
     del timestamps
-    #del max_values
-    #del min_values
+    del max_values
+    del min_values
 
     gc.collect()  # Forcer la récupération de mémoire
