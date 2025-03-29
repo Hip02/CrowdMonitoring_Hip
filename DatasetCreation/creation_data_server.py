@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import numpy as np
 import gc
 from utils.utils import process_radar_file, process_video_file, save_radar_maps, save_video_frames
@@ -10,8 +11,14 @@ source_data_path = "/linux/hhilgers/DATA_COLLECTION"
 radar_data_path = os.path.join(source_data_path, "Radar")
 video_data_path = os.path.join(source_data_path, "Video")
 
+parser = argparse.ArgumentParser(description="Process radar and video files")
+# from and to arguments
+parser.add_argument("-f", "--from", type=int, default=0)
+parser.add_argument("-t", "--to", type=int, default=51)
+args = parser.parse_args()
+
 ### NOUVEAU DATASET ###
-n_exp = np.arange(1, 51)
+n_exp = np.arange(args.from, args.to)
 
 antenna_i = 0
 cropCenter = True
