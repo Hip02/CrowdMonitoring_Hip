@@ -8,6 +8,7 @@ class DataAugmentor:
         self.cfg = config['augmentation']
 
     def apply(self, x):
+        print("Dimension received:", x.shape)
         img = x.clone()  # (C, H, W), où C = nb de frames concaténées
         frames = torch.unbind(img, dim=0)  # liste de (H, W), une par frame
 
