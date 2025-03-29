@@ -8,7 +8,7 @@ import copy
 from networks.architectures.network_classification import DopplerNetClassification
 from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
 from networks.architectures.network_regression import DebugResNet, SimpleCNN
-from utils.utils import DopplerDataset
+from utils.utils import DopplerDataset, plot_learning_curves
 import seaborn as sns
 from termcolor import colored
 
@@ -72,7 +72,7 @@ class Network_Class:
                 
             #self.model = DebugResNet(param).to(self.device)
             #self.criterion = nn.MSELoss()
-            
+
             self.model = SimpleCNN(param).to(self.device)
             self.criterion = nn.MSELoss()
 
@@ -207,6 +207,9 @@ class Network_Class:
             val_losses.append(mean_val_loss)
 
             print(f"✅ Epoch {i + 1}/{self.epoch} | Train Loss: {mean_train_loss:.4f} | Val Loss: {mean_val_loss:.4f}")
+
+            # plot learning curves at each epoch
+            plot_learning_curves(train_losses, val_losses, self.resultsPath)
 
             if mean_val_loss < best_loss:
                 best_loss = mean_val_loss
