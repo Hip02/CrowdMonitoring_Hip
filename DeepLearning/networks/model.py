@@ -72,7 +72,7 @@ class Network_Class:
                 
             #self.model = DebugResNet(param).to(self.device)
             #self.criterion = nn.MSELoss()
-
+            
             self.model = SimpleCNN(param).to(self.device)
             self.criterion = nn.MSELoss()
 
