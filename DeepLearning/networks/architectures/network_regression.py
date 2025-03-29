@@ -11,7 +11,7 @@ import torchvision
 
 
 class SimpleCNN(nn.Module):
-    def __init__(self, input_channels=1):
+    def __init__(self, param, input_channels=1):
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=5, stride=1, padding=2)
         self.pool = nn.MaxPool2d(kernel_size=2)
