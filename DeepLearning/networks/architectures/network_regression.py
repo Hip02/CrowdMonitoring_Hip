@@ -11,7 +11,7 @@ import torchvision
 
 
 class SimpleCNN(nn.Module):
-    def __init__(self, input_channels=1, output_dim=1):  # output_dim=1 pour régression
+    def __init__(self, param, input_channels=1, output_dim=1):  # output_dim=1 pour régression
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=5, stride=1, padding=2)
         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
