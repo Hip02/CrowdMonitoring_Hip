@@ -59,7 +59,7 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
 
     # Save max values for antenna 1 as a numpy array into a new folder
     os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesCropped", exist_ok=True)
-    np.save(f"{base_path}/{exp_names[f]}MaxValuesCropped/max_values.npy", np.array(max_values))
+    np.save(f"{base_path}/{exp_names[f]}/MaxValuesCropped/max_values.npy", np.array(max_values))
 
     # Save min values for antenna 1 as a numpy array into a new folder
     os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesCropped", exist_ok=True)
