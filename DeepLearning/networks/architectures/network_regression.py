@@ -12,8 +12,11 @@ import torchvision
 
 class SimpleCNN(nn.Module):
     def __init__(self, param, input_channels=1, output_dim=1):  # output_dim=1 pour régression
+
+        self.input_channels = param["MODEL"].get("NB_CHANNELS", input_channels)
+
         super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(input_channels, 8, kernel_size=5, stride=1, padding=2)
+        self.conv1 = nn.Conv2d(self.input_channels, 8, kernel_size=5, stride=1, padding=2)
         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2)  # dim // 2
         self.adaptive_pool = nn.AdaptiveAvgPool2d((8, 8))  # fixe à (8, 8)
@@ -22,9 +25,9 @@ class SimpleCNN(nn.Module):
         self.fc2 = nn.Linear(64, output_dim)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))     # -> (B, 8, 236, 236)
-        x = self.pool(F.relu(self.conv2(x)))     # -> (B, 16, 118, 118)
-        x = self.adaptive_pool(x)                # -> (B, 16, 8, 8)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.adaptive_pool(x)
         x = x.view(x.size(0), -1)                # -> (B, 1024)
         x = F.relu(self.fc1(x))                  # -> (B, 64)
         return self.fc2(x)                       # -> (B, output_dim)
