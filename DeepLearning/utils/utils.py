@@ -70,6 +70,7 @@ class DataLoader:
         """
         self.base_path = base_path
         self.cropped_radar_maps = True
+        print(colored(f"Cropped = {self.cropped_radar_maps}"))
         self.exp_list = exp_list if exp_list else self._discover_experiments()
         self.data = {
             "min_values": {}, "max_values": {}, "min_values2": {},
