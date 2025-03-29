@@ -8,11 +8,11 @@ class DataAugmentor:
         self.cfg = config['augmentation']
 
     def apply(self, x):
-        print("Dimension received:", x.shape)
-        img = x.clone()  # (C, H, W), où C = nb de frames concaténées
-        frames = torch.unbind(img, dim=0)  # liste de (H, W), une par frame
+        # x: (B, 10, H, W)
+        B, C, H, W = x.shape
+        x = x.clone()
 
-        # On stocke les opérations à appliquer à toutes les frames
+        # --- Préparer les opérations communes ---
         ops = []
 
         # --- Flip / Rotation ---
@@ -27,6 +27,7 @@ class DataAugmentor:
                 ops.append(TF.vflip)
 
         # --- Brightness / Contrast ---
+        # On crée les facteurs à l’avance pour les réutiliser
         if self.cfg['color']['enable'] and random.random() < self.cfg['color']['prob_apply']:
             b = random.uniform(*self.cfg['color']['brightness'])
             c = random.uniform(*self.cfg['color']['contrast'])
@@ -44,11 +45,12 @@ class DataAugmentor:
                 blur = T.GaussianBlur(kernel_size=k, sigma=sigma)
                 ops.append(blur)
 
-        # Appliquer toutes les opérations à chaque frame
-        frames = [self._apply_ops(f, ops) for f in frames]
-        return torch.stack(frames, dim=0)
+        # --- Appliquer à chaque frame (canal) séparément, batch par batch ---
+        for b in range(B):
+            for c in range(C):
+                img = x[b, c].unsqueeze(0)  # (1, H, W)
+                for op in ops:
+                    img = op(img)
+                x[b, c] = img.squeeze(0)
 
-    def _apply_ops(self, img, ops):
-        for op in ops:
-            img = op(img)
-        return img
+        return x
