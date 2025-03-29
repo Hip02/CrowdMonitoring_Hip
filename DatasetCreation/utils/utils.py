@@ -119,7 +119,7 @@ def fmcwProcess(filename, osFactor, indexFrameProcess=None, clrRF=True, disp=Tru
         "info"          : info
     }
 
-def process_radar_file(input_radar_raw_filename, indexFrameProcess=None, saveMagn=True, savePhase=False, osFactor=8, clrRF=True, iAntennaShow=0):
+def process_radar_file(input_radar_raw_filename, indexFrameProcess=None, saveMagn=True, savePhase=False, osFactor=8, clrRF=True, iAntennaShow=0, cropCenter=False):
     """
     Input:
         - input_radar_raw_filename: name of the radar raw file
@@ -151,6 +151,12 @@ def process_radar_file(input_radar_raw_filename, indexFrameProcess=None, saveMag
     for i in indexFrameProcess:
         frameDataToSave = rsData['rsmap'][i, iAntennaShow]
         
+        # Crop the frame to keep remove 8% borders on each side
+        if cropCenter:
+            h, w = frameDataToSave.shape
+            crop_size = int(0.08 * min(h, w))
+            frameDataToSave = frameDataToSave[crop_size:h-crop_size, crop_size:w-crop_size]
+
         if saveMagn:
             # Keep only magnitude
             frameDataToSaveAbs = np.abs(frameDataToSave)

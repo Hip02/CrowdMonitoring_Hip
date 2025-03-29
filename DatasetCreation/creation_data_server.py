@@ -13,7 +13,8 @@ video_data_path = os.path.join(source_data_path, "Video")
 ### NOUVEAU DATASET ###
 n_exp = np.arange(1, 51)
 
-antenna_i = 1
+antenna_i = 0
+cropCenter = True
 
 input_videos_filenames = [f"{video_data_path}/exp{i}.MOV" for i in n_exp]
 input_radar_raw_filenames  = [f"{radar_data_path}/exp{i}.npz" for i in n_exp]
@@ -26,7 +27,7 @@ if crop_index == None: crop_index = len(input_videos_filenames)
 for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_videos_filenames[:crop_index], input_radar_raw_filenames[:crop_index])):
     print(f"Processing {input_video_filename} and {input_radar_raw_filename}")
 
-    radar_data = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=antenna_i)
+    radar_data = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=antenna_i, cropCenter=cropCenter)
     timestamps = radar_data['timestamps']
     #video_data = process_video_file(input_video_filename, timestamps, saveFrames=True)
 
@@ -40,10 +41,10 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     max_values = []
     min_values = []
 
-    #for i in range(min(n_radar_maps, n_labels)):
+    for i in range(min(n_radar_maps, n_labels)):
         #save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudes")
         #save_radar_maps(radar_data['phases'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarPhases")
-        #save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesAntenna{antenna_i}")
+        save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesCropped")
         #save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")
         #max_values.append(radar_data['magnitudes'][i].max())
