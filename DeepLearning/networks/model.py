@@ -7,7 +7,7 @@ import copy
 
 from networks.architectures.network_classification import DopplerNetClassification
 from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
-from networks.architectures.network_regression import DebugResNet
+from networks.architectures.network_regression import DebugResNet, SimpleCNN
 from utils.utils import DopplerDataset
 import seaborn as sns
 from termcolor import colored
@@ -70,7 +70,10 @@ class Network_Class:
             elif self.resnet_type == "resnet_XS":
                 layers = [1, 1, 1, 1]
                 
-            self.model = DebugResNet(param).to(self.device)
+            #self.model = DebugResNet(param).to(self.device)
+            #self.criterion = nn.MSELoss()
+
+            self.model = SimpleCNN(param).to(self.device)
             self.criterion = nn.MSELoss()
 
             #self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
