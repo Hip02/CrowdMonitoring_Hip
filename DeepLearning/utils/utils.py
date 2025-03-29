@@ -69,6 +69,7 @@ class DataLoader:
             to_load (list, optional): Liste des types de données à charger immédiatement.
         """
         self.base_path = base_path
+        self.cropped_radar_maps = True
         self.exp_list = exp_list if exp_list else self._discover_experiments()
         self.data = {
             "min_values": {}, "max_values": {}, "min_values2": {},
@@ -99,9 +100,16 @@ class DataLoader:
             if "labels" in to_load: 
                 self.data["labels"][exp] = self._load_labels(exp)
 
+            if self.cropped_radar_maps:
+                magnitudes_to_load = "RadarMagnitudesCropped"
+                phases_to_load = "RadarPhasesCropped"
+            else:
+                magnitudes_to_load = "RadarMagnitudes"
+                phases_to_load = "RadarPhases"
+
             # Utilisation du proxy pour le chargement différé des images
-            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudes"))
-            self.data["phases"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhases"))
+            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load))
+            self.data["phases"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, phases_to_load))
             self.data["magnitudes2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudesAntenna1"))
             self.data["phases2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhasesAntenna1"))
 
