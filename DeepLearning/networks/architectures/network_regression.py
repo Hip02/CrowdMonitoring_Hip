@@ -14,6 +14,7 @@ class SimpleCNN_2path(nn.Module):
     def __init__(self, param, input_channels=1, output_dim=1):  # output_dim=1 pour régression
 
         self.input_channels = param["MODEL"].get("NB_CHANNELS", input_channels)
+        self.dilation = param["MODEL"].get("DILATION", 1)
 
         super(SimpleCNN_2path, self).__init__()
         # === Canal principal (Path A) ===
@@ -21,13 +22,13 @@ class SimpleCNN_2path(nn.Module):
         self.conv2_a = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
 
         # === Canal parallèle (Path B) ===
-        self.conv1_b = nn.Conv2d(self.input_channels, 8, kernel_size=5, stride=1, padding=2)
-        self.conv2_b = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
+        self.conv1_b = nn.Conv2d(self.input_channels, 8, kernel_size=5, stride=1, padding=2, dilation=self.dilation)
+        self.conv2_b = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1, dilation=self.dilation)
 
         self.pool = nn.MaxPool2d(kernel_size=2)  # dim // 2
         self.adaptive_pool = nn.AdaptiveAvgPool2d((8, 8))  # fixe à (8, 8)
         
-        self.fc1 = nn.Linear(2* 16 * 8 * 8, 64)
+        self.fc1 = nn.Linear(2 * 16 * 8 * 8, 64)
         self.fc2 = nn.Linear(64, output_dim)
 
     def forward(self, x):
