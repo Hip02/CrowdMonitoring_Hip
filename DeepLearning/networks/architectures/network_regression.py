@@ -10,37 +10,43 @@ import torchvision
 ##############################################################################
 
 
-class SimpleCNN2(nn.Module):
-    def __init__(self, param, input_channels=1, output_dim=1):
-        super(SimpleCNN2, self).__init__()
+class SimpleCNN_2path(nn.Module):
+    def __init__(self, param, input_channels=1, output_dim=1):  # output_dim=1 pour régression
 
         self.input_channels = param["MODEL"].get("NB_CHANNELS", input_channels)
 
-        self.conv1 = nn.Conv2d(self.input_channels, 16, kernel_size=5, stride=1, padding=2)
-        self.bn1 = nn.BatchNorm2d(16)
+        super(SimpleCNN_2path, self).__init__()
+        # === Canal principal (Path A) ===
+        self.conv1_a = nn.Conv2d(self.input_channels, 8, kernel_size=5, stride=1, padding=2)
+        self.conv2_a = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
 
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(32)
+        # === Canal parallèle (Path B) ===
+        self.conv1_b = nn.Conv2d(self.input_channels, 8, kernel_size=5, stride=1, padding=2)
+        self.conv2_b = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
 
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.bn3 = nn.BatchNorm2d(64)
-
-        self.pool = nn.MaxPool2d(kernel_size=2)
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((4, 4))  # output size = (4, 4)
-
-        self.fc1 = nn.Linear(64 * 4 * 4, 128)
-        self.dropout = nn.Dropout(p=0.3)
-        self.fc2 = nn.Linear(128, output_dim)
+        self.pool = nn.MaxPool2d(kernel_size=2)  # dim // 2
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((8, 8))  # fixe à (8, 8)
+        
+        self.fc1 = nn.Linear(2* 16 * 8 * 8, 64)
+        self.fc2 = nn.Linear(64, output_dim)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.bn1(self.conv1(x))))  # (B, 16, H/2, W/2)
-        x = self.pool(F.relu(self.bn2(self.conv2(x))))  # (B, 32, H/4, W/4)
-        x = self.pool(F.relu(self.bn3(self.conv3(x))))  # (B, 64, H/8, W/8)
-        x = self.adaptive_pool(x)                       # (B, 64, 4, 4)
-        x = x.view(x.size(0), -1)                       # (B, 1024)
-        x = F.relu(self.fc1(x))                         # (B, 128)
-        x = self.dropout(x)
-        return self.fc2(x)                              # (B, output_dim)
+        # === Forward canal A ===
+        xa = self.pool(F.relu(self.conv1_a(x)))
+        xa = self.pool(F.relu(self.conv2_a(xa)))
+        xa = self.adaptive_pool(xa)
+
+        # === Forward canal B ===
+        xb = self.pool(F.relu(self.conv1_b(x)))
+        xb = self.pool(F.relu(self.conv2_b(xb)))
+        xb = self.adaptive_pool(xb)
+
+        # Concaténation des deux chemins
+        x_cat = torch.cat([xa, xb], dim=1)
+
+        x_cat = x_cat.view(x_cat.size(0), -1) # flatten
+        x_cat = F.relu(self.fc1(x_cat))
+        return self.fc2(x_cat)
 
 
 class SimpleCNN(nn.Module):

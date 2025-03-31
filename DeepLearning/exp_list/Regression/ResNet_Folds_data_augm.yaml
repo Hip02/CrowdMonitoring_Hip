@@ -29,5 +29,5 @@ augmentation:
     enable: true
     prob_apply: 0.4  # 40% de chances d’appliquer soit un bruit, soit un flou
     prob_noise_vs_blur: 0.5  # 50% chance d'ajouter un bruit, 50% un flou
-    gaussian_noise_std: 0.01
-    blur_radius: 1.5
+    gaussian_noise_std: [0.01, 0.1]
+    blur_radius: [1.5, 4.0]
