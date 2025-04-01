@@ -605,3 +605,54 @@ def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path
     os.makedirs(os.path.join(results_path, "_LearningCurves"), exist_ok=True)
     plt.savefig(os.path.join(results_path, "_LearningCurves", "learning_curve_multiple.pdf"))
     plt.close()
+
+
+def compare_multiple_learning_curves(
+    all_trains,
+    all_vals,
+    labels,
+    results_path,
+    title="Comparison of Learning Curves"
+):
+    """
+    Compare multiple training and validation loss curves.
+
+    Args:
+        all_trains (List[List[float]]): List of training loss curves.
+        all_vals (List[List[float]]): List of validation loss curves.
+        labels (List[str]): List of labels for each model.
+        results_path (str): Path to save the plot.
+        title (str): Plot title.
+    """
+    assert len(all_trains) == len(all_vals) == len(labels), "Mismatch in number of models and labels"
+    
+    colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'brown']
+
+    plt.figure(figsize=(12, 6))
+
+    for i in range(len(all_trains)):
+        train = all_trains[i]
+        val = all_vals[i]
+        color = colors[i % len(colors)]
+
+        # Plot training and validation with distinct line styles
+        plt.plot(train, label=f"{labels[i]} Train", color=color, linestyle='-', linewidth=2)
+        plt.plot(val, label=f"{labels[i]} Val", color=color, linestyle='--', linewidth=2)
+
+        # Add markers every ~10 epochs
+        num_points = len(train)
+        for j in range(0, num_points, max(1, num_points // 10)):
+            plt.scatter(j, train[j], color=color, s=20)
+            plt.scatter(j, val[j], color=color, s=20, marker='x')
+
+    # Plot formatting
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+
+    # Save figure
+    os.makedirs(os.path.join(results_path, "_LearningCurves"), exist_ok=True)
+    plt.savefig(os.path.join(results_path, "_LearningCurves", "comparison_multiple_learning_curves.pdf"))
+    plt.close()
