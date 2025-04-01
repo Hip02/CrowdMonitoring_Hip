@@ -139,6 +139,9 @@ class Network_Class:
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
     def train(self):
+
+        max_batches_debug = 10
+
         best_loss = np.Inf
         val_losses = []
         train_losses = []
@@ -155,7 +158,7 @@ class Network_Class:
             total_steps = len(self.trainDataLoader)
             progress_bar = tqdm(total=total_steps, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
 
-            for image_magnitude, max_doppler, labels in self.trainDataLoader:
+            for batch_idx, (image_magnitude, max_doppler, labels) in enumerate(self.trainDataLoader):
                 t0 = time.time()
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
@@ -194,6 +197,10 @@ class Network_Class:
                 progress_bar.update(1)
                 progress_bar.set_postfix(loss=f"{loss.item():.4f}")
                 profiling["progress_bar"] += time.time() - t6
+
+                if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
+                    print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
+                    break
 
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
