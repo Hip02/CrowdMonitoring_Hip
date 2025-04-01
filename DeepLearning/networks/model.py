@@ -155,9 +155,8 @@ class Network_Class:
             total_train_samples = 0
 
             print(f"\n🔄 Epoch {i+1}/{self.epoch} — Entraînement en cours...")
-            t_1 = time.time()
+            epoch_start = time.time()
             for batch_idx, (image_magnitude, max_doppler, labels) in enumerate(self.trainDataLoader):
-                profiling["preprocessing"] += time.time() - t_1
                 t0 = time.time()
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
@@ -196,7 +195,9 @@ class Network_Class:
                 if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
                     print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
                     break
-
+                
+            epoch_duration = time.time() - epoch_start
+            print(f"⏱️ Durée réelle de l'epoch : {epoch_duration:.2f} sec")
             # Affichage profiling
             print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
             total_time = sum(profiling.values())
