@@ -148,15 +148,13 @@ class Network_Class:
 
         # Initialiser le profiler
         profiling = defaultdict(float)
-        total_batches = len(self.trainDataLoader) * self.epoch
 
         for i in range(self.epoch):
             self.model.train(True)
             train_loss = 0.0
             total_train_samples = 0
 
-            total_steps = len(self.trainDataLoader)
-            progress_bar = tqdm(total=total_steps, desc=f"🟢 Epoch {i+1}/{self.epoch}", unit="batch", leave=True)
+            print(f"\n🔄 Epoch {i+1}/{self.epoch} — Entraînement en cours...")
 
             for batch_idx, (image_magnitude, max_doppler, labels) in enumerate(self.trainDataLoader):
                 t0 = time.time()
@@ -191,24 +189,12 @@ class Network_Class:
                 self.optimizer.step()
                 profiling["optimizer"] += time.time() - t5
 
-                t6 = time.time()
-                #train_loss += loss.item() * labels.size(0)
-                #total_train_samples += labels.size(0)
-                #progress_bar.update(1)
-                #progress_bar.set_postfix(loss=f"{loss.item():.4f}")
-                profiling["progress_bar"] += time.time() - t6
+                train_loss += loss.item() * labels.size(0)
+                total_train_samples += labels.size(0)
 
                 if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
                     print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
                     break
-
-
-            # Profiling résumé
-            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
-            total_time = sum(profiling.values())
-            for k, v in profiling.items():
-                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
-
 
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
@@ -227,13 +213,21 @@ class Network_Class:
                     outputs = self.model(image_magnitude)
                     loss = self.criterion(outputs, labels)
                     val_loss += loss.item() * labels.size(0)
+                    total_val_samples += labels.size(0)
 
             mean_val_loss = val_loss / total_val_samples
             val_losses.append(mean_val_loss)
 
-            print(f"✅ Epoch {i + 1}/{self.epoch} | Train Loss: {mean_train_loss:.4f} | Val Loss: {mean_val_loss:.4f}")
+            # Affichage simple
+            print(f"✅ Epoch {i+1} terminée | Train Loss: {mean_train_loss:.4f} | Val Loss: {mean_val_loss:.4f}")
 
-            # plot learning curves at each epoch
+            # Affichage profiling
+            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
+            total_time = sum(profiling.values())
+            for k, v in profiling.items():
+                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
+
+            # Courbes d'apprentissage
             plot_learning_curves(train_losses, val_losses, self.resultsPath)
 
             if mean_val_loss < best_loss:
@@ -242,7 +236,7 @@ class Network_Class:
                 wghtsPath = self.resultsPath + '/_Weights/'
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
-                print("Model saved")
+                print("💾 Modèle sauvegardé (meilleure validation)")
 
         return train_losses, val_losses
 
