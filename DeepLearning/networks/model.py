@@ -140,7 +140,7 @@ class Network_Class:
 
     def train(self):
 
-        max_batches_debug = 100
+        max_batches_debug = 1
 
         best_loss = np.Inf
         val_losses = []
@@ -195,7 +195,7 @@ class Network_Class:
                 if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
                     print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
                     break
-                
+
             epoch_duration = time.time() - epoch_start
             print(f"⏱️ Durée réelle de l'epoch : {epoch_duration:.2f} sec")
             # Affichage profiling
