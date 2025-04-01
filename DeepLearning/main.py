@@ -45,21 +45,6 @@ param["DATASET"]["FOLD_NUMBER"] = fold
 resultsPath = os.path.join("results", exp, f"fold{fold}")
 os.makedirs(resultsPath, exist_ok=True)
 
-# Setup logging
-log_file_path = os.path.join(resultsPath, "log.txt")
-class TeeLogger:
-    def __init__(self, *streams):
-        self.streams = streams
-    def write(self, message):
-        for s in self.streams:
-            s.write(message)
-            s.flush()
-    def flush(self):
-        for s in self.streams:
-            s.flush()
-sys.stdout = TeeLogger(sys.stdout, open(log_file_path, "w"))
-sys.stderr = sys.stdout
-
 # Initialize and run the network
 data_loader = DataLoader(base_path, exp_list=all)
 myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
