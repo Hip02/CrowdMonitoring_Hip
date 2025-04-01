@@ -196,6 +196,13 @@ class Network_Class:
                     print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
                     break
 
+            # Affichage profiling
+            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
+            total_time = sum(profiling.values())
+            for k, v in profiling.items():
+                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
+
+
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
 
@@ -220,12 +227,6 @@ class Network_Class:
 
             # Affichage simple
             print(f"✅ Epoch {i+1} terminée | Train Loss: {mean_train_loss:.4f} | Val Loss: {mean_val_loss:.4f}")
-
-            # Affichage profiling
-            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
-            total_time = sum(profiling.values())
-            for k, v in profiling.items():
-                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
 
             # Courbes d'apprentissage
             plot_learning_curves(train_losses, val_losses, self.resultsPath)
