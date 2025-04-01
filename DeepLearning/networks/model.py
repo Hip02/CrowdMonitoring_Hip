@@ -195,7 +195,7 @@ class Network_Class:
                 train_loss += loss.item() * labels.size(0)
                 total_train_samples += labels.size(0)
                 progress_bar.update(1)
-                progress_bar.set_postfix(loss=f"{loss.item():.4f}")
+                #progress_bar.set_postfix(loss=f"{loss.item():.4f}")
                 profiling["progress_bar"] += time.time() - t6
 
                 if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
