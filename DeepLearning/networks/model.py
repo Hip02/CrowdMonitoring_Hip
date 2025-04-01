@@ -139,71 +139,42 @@ class Network_Class:
         self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
     def train(self):
-
-        max_batches_debug = 1
-
         best_loss = np.Inf
         val_losses = []
         train_losses = []
 
-        # Initialiser le profiler
-        profiling = defaultdict(float)
+        start_time = time.time()
 
         for i in range(self.epoch):
             self.model.train(True)
             train_loss = 0.0
             total_train_samples = 0
 
-            print(f"\n🔄 Epoch {i+1}/{self.epoch} — Entraînement en cours...")
-            epoch_start = time.time()
             for batch_idx, (image_magnitude, max_doppler, labels) in enumerate(self.trainDataLoader):
-                t0 = time.time()
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
                 labels = labels.to(self.device)
-                profiling["data_loading"] += time.time() - t0
 
-                t1 = time.time()
                 if self.data_augm:
                     data_augmentor = DataAugmentor(config=self.config)
                     image_magnitude = data_augmentor.apply(image_magnitude)
-                profiling["augmentation"] += time.time() - t1
 
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
 
-                t2 = time.time()
+
                 self.optimizer.zero_grad()
                 outputs = self.model(image_magnitude)
-                profiling["forward"] += time.time() - t2
-
-                t3 = time.time()
                 loss = self.criterion(outputs, labels)
-                profiling["loss"] += time.time() - t3
-
-                t4 = time.time()
                 loss.backward()
-                profiling["backward"] += time.time() - t4
-
-                t5 = time.time()
                 self.optimizer.step()
-                profiling["optimizer"] += time.time() - t5
 
                 train_loss += loss.item() * labels.size(0)
                 total_train_samples += labels.size(0)
 
-                if max_batches_debug is not None and batch_idx + 1 >= max_batches_debug:
-                    print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
-                    break
-
-            epoch_duration = time.time() - epoch_start
-            print(f"⏱️ Durée réelle de l'epoch : {epoch_duration:.2f} sec")
-            # Affichage profiling
-            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
-            total_time = sum(profiling.values())
-            for k, v in profiling.items():
-                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
-
+                # Every 10 batches, print that the training is in progress
+                if batch_idx % 100 == 0:
+                    print(f"🔄 Training... | Epoch {i+1}/{self.epoch} | Batch {batch_idx} (time = {time.time() - start_time:.2f})")
 
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
