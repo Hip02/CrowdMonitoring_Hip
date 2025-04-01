@@ -174,7 +174,7 @@ class Network_Class:
 
                 # Every 10 batches, print that the training is in progress
                 if batch_idx % 100 == 0:
-                    print(f"🔄 Training... | Epoch {i+1}/{self.epoch} | Batch {batch_idx/len({self.dataSetTrain})} (time = {time.time() - start_time:.2f})")
+                    print(f"🔄 Training... | Epoch {i+1}/{self.epoch} | Batch {batch_idx}/{len({self.dataSetTrain})} (time = {time.time() - start_time:.2f})")
 
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
