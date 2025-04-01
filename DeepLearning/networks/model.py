@@ -140,7 +140,7 @@ class Network_Class:
 
     def train(self):
 
-        max_batches_debug = 10
+        max_batches_debug = 100
 
         best_loss = np.Inf
         val_losses = []
