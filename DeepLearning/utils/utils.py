@@ -134,7 +134,7 @@ class DataLoader:
                 phases_to_load = "RadarPhases"
 
             # Utilisation du proxy pour le chargement différé des images
-            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=True)
+            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=False)
             self.data["phases"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, phases_to_load))
             self.data["magnitudes2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudesAntenna1"))
             self.data["phases2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhasesAntenna1"))
