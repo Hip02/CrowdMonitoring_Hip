@@ -18,9 +18,13 @@ from termcolor import colored
 class LazyImageLoader:
     """Classe pour charger les images à la demande (lazy loading), triées par numéro."""
     
-    def __init__(self, directory):
+    def __init__(self, directory, not_lazy=False):
+        self.not_lazy = not_lazy
         self.directory = directory
         self.file_list = self._get_sorted_files()
+
+        if self.not_lazy:
+            self.file_list_loaded = self.load_all_images()
 
     def _get_sorted_files(self):
         """Récupère et trie les fichiers .png en fonction du numéro dans leur nom."""
@@ -38,17 +42,38 @@ class LazyImageLoader:
 
         return sorted(files, key=extract_number)  # Trie la liste selon le numéro
 
-    def load_image(self, index):
-        """Charge une image PNG spécifique lorsqu’elle est demandée."""
-        #print(f"index type = {type(index)}, index={index}")
-        if 0 <= index < len(self.file_list):
-            file_path = os.path.join(self.directory, self.file_list[index])
-            img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)  # Chargement en niveaux de gris
+    def load_all_images(self):
+        """Charge toutes les images PNG dans un tableau numpy."""
+        data = []
+        for file in tqdm(self.file_list, desc="Chargement des images", unit="image"):
+            file_path = os.path.join(self.directory, file)
+            img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
             if img is not None:
-                img = np.expand_dims(img, axis=-1)  # Ajout de la dimension du canal
-                return img
-        return None  # Retourne None si l'image est introuvable ou si l'index est hors limites
+                img = np.expand_dims(img, axis=-1)
+                data.append(img)
+        return np.array(data)
+
+    def load_image(self, index):
+        """
+        Charge une image PNG spécifique lorsqu’elle est demandée.
+        Si self.not_lazy est True -> charge l'image depuis le tableau numpy chargé.
+        Sinon -> charge l'image depuis le disque.
+        """
+        
+        if self.not_lazy:
+            return self.file_list_loaded[index] if 0 <= index < len(self.file_list_loaded) else None
     
+        else:
+            if 0 <= index < len(self.file_list):
+                file_path = os.path.join(self.directory, self.file_list[index])
+                img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)  # Chargement en niveaux de gris
+                if img is not None:
+                    img = np.expand_dims(img, axis=-1)  # Ajout de la dimension du canal
+                    return img
+            return None  # Retourne None si l'image est introuvable ou si l'index est hors limites
+            
+        # Retourne None si l'image est introuvable ou si l'index est hors limites
+
     def __len__(self):
         """Retourne le nombre d'images disponibles."""
         return len(self.file_list)
@@ -109,7 +134,7 @@ class DataLoader:
                 phases_to_load = "RadarPhases"
 
             # Utilisation du proxy pour le chargement différé des images
-            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load))
+            self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=True)
             self.data["phases"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, phases_to_load))
             self.data["magnitudes2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarMagnitudesAntenna1"))
             self.data["phases2"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, "RadarPhasesAntenna1"))
