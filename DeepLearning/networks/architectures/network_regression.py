@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
+from torchvision.models import ResNet18_Weights
+
 ##############################################################################
 #                                                                            #
 # CLASS DESCRIBING AN IMPROVED CNN ARCHITECTURE FOR DOPPLER MAPS (512x512)   #
@@ -81,7 +83,7 @@ class DebugResNet(nn.Module):
 
         super(DebugResNet, self).__init__()
 
-        self.model = torchvision.models.resnet18(pretrained=self.pretrained)
+        self.model = torchvision.models.resnet18(weight = ResNet18_Weights.DEFAULT if self.pretrained else None)
 
         self.model.conv1 = nn.Conv2d(self.in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.model.fc = nn.Linear(self.model.fc.in_features, 1)
