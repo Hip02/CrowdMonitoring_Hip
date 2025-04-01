@@ -202,6 +202,14 @@ class Network_Class:
                     print(f"\n🛑 Entraînement interrompu après {max_batches_debug} batchs pour debug.")
                     break
 
+
+            # Profiling résumé
+            print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
+            total_time = sum(profiling.values())
+            for k, v in profiling.items():
+                print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
+
+
             mean_train_loss = train_loss / total_train_samples
             train_losses.append(mean_train_loss)
 
@@ -235,12 +243,6 @@ class Network_Class:
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
                 print("Model saved")
-
-        # Profiling résumé
-        print("\n🕵️ Profiling entraînement (temps cumulé par phase) :")
-        total_time = sum(profiling.values())
-        for k, v in profiling.items():
-            print(f"{k.replace('_', ' ').capitalize():<15}: {v:.2f}s ({(v/total_time)*100:.1f}%)")
 
         return train_losses, val_losses
 
