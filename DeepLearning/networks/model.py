@@ -155,8 +155,9 @@ class Network_Class:
             total_train_samples = 0
 
             print(f"\n🔄 Epoch {i+1}/{self.epoch} — Entraînement en cours...")
-
+            t_1 = time.time()
             for batch_idx, (image_magnitude, max_doppler, labels) in enumerate(self.trainDataLoader):
+                profiling["preprocessing"] += time.time() - t_1
                 t0 = time.time()
                 image_magnitude = image_magnitude.to(self.device)
                 max_doppler = max_doppler.to(self.device)
