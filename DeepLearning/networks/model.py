@@ -192,9 +192,9 @@ class Network_Class:
                 profiling["optimizer"] += time.time() - t5
 
                 t6 = time.time()
-                train_loss += loss.item() * labels.size(0)
-                total_train_samples += labels.size(0)
-                progress_bar.update(1)
+                #train_loss += loss.item() * labels.size(0)
+                #total_train_samples += labels.size(0)
+                #progress_bar.update(1)
                 #progress_bar.set_postfix(loss=f"{loss.item():.4f}")
                 profiling["progress_bar"] += time.time() - t6
 
