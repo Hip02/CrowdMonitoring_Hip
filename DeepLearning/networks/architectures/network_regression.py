@@ -28,7 +28,7 @@ class Homemade_CNN(nn.Module):
         self.convs = nn.ModuleList()
         self.bns = nn.ModuleList()
         for _ in range(self.D - 1):
-            self.convs.append(nn.Conv2d(self.N, self.N, kernel_size=3, padding=1)) # PAreil ici pour le padding
+            self.convs.append(nn.Conv2d(self.N, self.N, kernel_size=3, padding=1)) # Pareil ici pour le padding
             self.bns.append(nn.BatchNorm2d(self.N))
 
 
