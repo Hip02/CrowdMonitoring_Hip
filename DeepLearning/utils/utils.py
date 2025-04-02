@@ -612,6 +612,7 @@ def compare_multiple_learning_curves(
     all_vals,
     labels,
     results_path,
+    max_y=0.5,
     title="Comparison of Learning Curves"
 ):
     """
@@ -621,6 +622,7 @@ def compare_multiple_learning_curves(
         all_trains (List[List[float]]): List of training loss curves.
         all_vals (List[List[float]]): List of validation loss curves.
         labels (List[str]): List of labels for each model.
+        max_y (float): Maximum y-axis value for the plot.
         results_path (str): Path to save the plot.
         title (str): Plot title.
     """
@@ -648,6 +650,7 @@ def compare_multiple_learning_curves(
     # Plot formatting
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
+    plt.ylim(0, max_y)
     plt.title(title)
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.5)

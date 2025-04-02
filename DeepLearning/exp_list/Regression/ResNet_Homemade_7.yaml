@@ -1,0 +1,17 @@
+# Homemade CNN with parameters D and N
+---
+DATASET:
+  FOLD_NUMBER: 0
+  STANDARDIZE_LABELS: true
+  
+MODEL:
+    NB_CHANNELS: 1
+    D : 5
+    N : 80
+    
+TRAINING: 
+  PREDICTION_TYPE: regression
+  LEARNING_RATE: 0.00002
+  EPOCH: 20
+  BATCH_SIZE: 16
+  DEVICE: cuda
