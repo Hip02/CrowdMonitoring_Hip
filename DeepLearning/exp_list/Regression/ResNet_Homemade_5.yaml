@@ -7,7 +7,7 @@ DATASET:
 MODEL:
     NB_CHANNELS: 1
     D : 5
-    N : 20
+    N : 16
     
 TRAINING: 
   PREDICTION_TYPE: regression
