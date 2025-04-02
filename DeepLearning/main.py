@@ -17,7 +17,8 @@ base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
 #l_exp = ["Regression/ResNet_Folds_ExpLR", "Regression/ResNet_Folds_OneCycleLR", "Regression/ResNet_Folds"]
-l_exp = [f"Regression/ResNet_Folds_debug{i}" for i in range(1, 40)]
+#l_exp = [f"Regression/ResNet_Folds_debug{i}" for i in range(1, 40)]
+l_exp = [f"Regression/ResNet_Homemade_{i}" for i in range(1, 40)]
 
 # Get experiment path from index
 try:
