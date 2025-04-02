@@ -1,0 +1,36 @@
+# Homemade CNN with parameters D and N
+---
+DATASET:
+  FOLD_NUMBER: 0
+  STANDARDIZE_LABELS: true
+  
+MODEL:
+    NB_CHANNELS: 1
+    D : 4
+    N : 32
+    
+TRAINING: 
+  PREDICTION_TYPE: regression
+  LEARNING_RATE: 0.00002
+  EPOCH: 20
+  BATCH_SIZE: 16
+  DEVICE: cuda
+
+
+augmentation:
+  flip_rotation:
+    enable: true
+    prob_apply: 0.5
+
+  color:
+    enable: true
+    prob_apply: 0.5
+    brightness: [1.65, 2.4]
+    contrast: [1.65, 2.4]
+
+  noise_blur:
+    enable: true
+    prob_apply: 0.5
+    prob_noise_vs_blur: 0.5
+    gaussian_noise_std: [0.02, 0.05]
+    blur_std: [3.0, 4.0]
