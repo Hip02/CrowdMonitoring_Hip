@@ -170,7 +170,7 @@ class Network_Class:
 
 
                 self.optimizer.zero_grad()
-                outputs = self.model(image_magnitude)
+                outputs = self.model(image_magnitude, max_doppler)
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
@@ -196,7 +196,7 @@ class Network_Class:
                     labels = labels.to(self.device)
                     if self.predictionType == "regression":
                         labels = labels.view(-1, 1)
-                    outputs = self.model(image_magnitude)
+                    outputs = self.model(image_magnitude, max_doppler)
                     loss = self.criterion(outputs, labels)
                     val_loss += loss.item() * labels.size(0)
                     total_val_samples += labels.size(0)
@@ -239,8 +239,8 @@ class Network_Class:
                     labels = labels.view(-1, 1).to(self.device)
 
                     ### DEBUG ###
-                    outputs = self.model(image_magnitude)
-                    #outputs = self.model(image_magnitude, max_doppler)
+                    #outputs = self.model(image_magnitude)
+                    outputs = self.model(image_magnitude, max_doppler)
                     loss = self.criterion(outputs, labels)
 
                     batch_size = labels.size(0)
@@ -316,7 +316,7 @@ class Network_Class:
                     #max_doppler = max_doppler.to(self.device)
                     labels = labels.to(self.device)
 
-                    outputs = self.model(image_magnitude) #, max_doppler)
+                    outputs = self.model(image_magnitude, max_doppler) #, max_doppler)
                     _, preds = torch.max(outputs, 1)
 
                     correct_predictions += (preds == labels).sum().item()
