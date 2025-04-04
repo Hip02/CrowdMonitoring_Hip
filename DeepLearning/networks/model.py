@@ -210,13 +210,13 @@ class Network_Class:
             # Courbes d'apprentissage
             plot_learning_curves(train_losses, val_losses, self.resultsPath)
 
-            if mean_val_loss < best_loss:
+            if True: #mean_val_loss < best_loss:
                 best_loss = mean_val_loss
                 best_model = copy.deepcopy(self.model)
                 wghtsPath = self.resultsPath + '/_Weights/'
                 createFolder(wghtsPath)
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
-                print("💾 Modèle sauvegardé (meilleure validation)")
+                print("💾 Modèle sauvegardé (à chaque epoch)")
 
         return train_losses, val_losses
 
