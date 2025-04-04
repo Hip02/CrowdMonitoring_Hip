@@ -73,8 +73,8 @@ class Network_Class:
             elif self.resnet_type == "resnet_XS":
                 layers = [1, 1, 1, 1]
                 
-            self.model = Homemade_CNN(param).to(self.device)
-            self.criterion = nn.MSELoss()
+            #self.model = Homemade_CNN(param).to(self.device)
+            #self.criterion = nn.MSELoss()
 
             #self.model = DebugResNet(param).to(self.device)
             #self.criterion = nn.MSELoss()
@@ -85,8 +85,8 @@ class Network_Class:
             #self.model = SimpleCNN(param).to(self.device)
             #self.criterion = nn.MSELoss()
 
-            #self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
-            #self.criterion = nn.MSELoss()
+            self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
+            self.criterion = nn.MSELoss()
 
         # Optimizer (initial LR is required for all schedulers)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
