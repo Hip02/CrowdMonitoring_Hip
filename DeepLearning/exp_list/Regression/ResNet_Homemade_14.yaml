@@ -6,7 +6,7 @@ DATASET:
   
 MODEL:
     NB_CHANNELS: 1
-    D : 3
+    D : 5
     N : 16
     
 TRAINING: 

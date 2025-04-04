@@ -566,7 +566,7 @@ def plot_learning_curves(train_losses, val_losses, results_path, file_name="lear
     plt.savefig(results_path + f"/_LearningCurves/{file_name}.pdf")
     plt.show()
 
-def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path, title="Learning Curves"):
+def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path, max_y=0.5, title="Learning Curves"):
     """
     Plot multiple learning curves with average curves overlaid in bold.
     
@@ -597,6 +597,7 @@ def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path
     # Plot formatting
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
+    plt.ylim(0, max_y)
     plt.title(title)
     plt.legend()
     plt.grid(True)
