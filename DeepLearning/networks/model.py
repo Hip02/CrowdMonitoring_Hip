@@ -6,7 +6,7 @@ import os
 import copy
 
 from networks.architectures.network_classification import DopplerNetClassification
-from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression, DopplerResNet50Regression
+from networks.architectures.network_regression import DopplerNetRegression, DopplerResNetRegression
 from networks.architectures.network_regression import DebugResNet, SimpleCNN, SimpleCNN_2path, Homemade_CNN
 from utils.utils import DopplerDataset, plot_learning_curves
 import seaborn as sns
