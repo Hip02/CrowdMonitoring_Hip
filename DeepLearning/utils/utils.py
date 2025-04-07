@@ -342,7 +342,7 @@ class DopplerDataset(Dataset):
         self.std_max_values2 = np.std(self.data_loader.get_max_values2())
 
         # Split des données (3 modes différents)
-        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_exp(fold_number=self.fold_number, suffle=shuffle) #self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
+        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_exp(fold_number=self.fold_number, shuffle=shuffle) #self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
 
         if self.mode == "train":
             self.data_indices = self.train_indices
