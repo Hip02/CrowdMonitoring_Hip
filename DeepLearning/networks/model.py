@@ -178,6 +178,7 @@ class Network_Class:
                 for image_magnitude, max_doppler, labels in self.valDataLoader:
                     image_magnitude = image_magnitude.to(self.device)
                     labels = labels.to(self.device)
+                    max_doppler = max_doppler.to(self.device)
                     if self.predictionType == "regression":
                         labels = labels.view(-1, 1)
                     outputs = self.model(image_magnitude, max_doppler)
@@ -219,7 +220,7 @@ class Network_Class:
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
-                    #max_doppler = max_doppler.to(self.device)
+                    max_doppler = max_doppler.to(self.device)
                     labels = labels.view(-1, 1).to(self.device)
 
                     ### DEBUG ###
@@ -297,7 +298,7 @@ class Network_Class:
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (classification)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
-                    #max_doppler = max_doppler.to(self.device)
+                    max_doppler = max_doppler.to(self.device)
                     labels = labels.to(self.device)
 
                     outputs = self.model(image_magnitude, max_doppler) #, max_doppler)
