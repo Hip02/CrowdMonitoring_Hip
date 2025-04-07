@@ -68,23 +68,7 @@ class Network_Class:
 
             if self.resnet_type == "resnet18":
                 layers = [2, 2, 2, 2]
-            elif self.resnet_type == "resnet34":
-                layers = [3, 4, 6, 3]
-            elif self.resnet_type == "resnet_XS":
-                layers = [1, 1, 1, 1]
-                
-            #self.model = Homemade_CNN(param).to(self.device)
-            #self.criterion = nn.MSELoss()
-
-            #self.model = DebugResNet(param).to(self.device)
-            #self.criterion = nn.MSELoss()
-
-            #self.model = SimpleCNN_2path(param).to(self.device)
-            #self.criterion = nn.MSELoss()
-
-            #self.model = SimpleCNN(param).to(self.device)
-            #self.criterion = nn.MSELoss()
-
+           
             self.model = DopplerResNetRegression(param, layers=layers).to(self.device)
             self.criterion = nn.MSELoss()
 

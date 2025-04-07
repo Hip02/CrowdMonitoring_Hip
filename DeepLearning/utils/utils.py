@@ -84,7 +84,7 @@ class LazyImageLoader:
 
 
 class DataLoader:
-    def __init__(self, base_path, exp_list=None, to_load=None):
+    def __init__(self, base_path, param, exp_list=None, to_load=None):
         """
         Initialise le DataLoader sans charger les cartes radar au préalable.
 
@@ -94,7 +94,7 @@ class DataLoader:
             to_load (list, optional): Liste des types de données à charger immédiatement.
         """
         self.base_path = base_path
-        self.cropped_radar_maps = True
+        self.cropped_radar_maps = param["DATASET"].get("CROPPED_RADAR_MAPS", False)
         print(colored(f"Cropped = {self.cropped_radar_maps}"))
         self.exp_list = exp_list if exp_list else self._discover_experiments()
         self.data = {
@@ -120,7 +120,10 @@ class DataLoader:
             if "min_values" in to_load: 
                 self.data["min_values"][exp] = self._load_min_values(exp)
             if "max_values" in to_load: 
-                self.data["max_values"][exp] = self._load_max_values(exp)
+                if self.cropped_radar_maps:
+                    self.data["max_values"][exp] = self._load_max_values_cropped(exp)
+                else:
+                    self.data["max_values"][exp] = self._load_max_values(exp)
             if "max_values2" in to_load:
                 self.data["max_values2"][exp] = self._load_max_values(exp)
             if "labels" in to_load: 
@@ -149,6 +152,11 @@ class DataLoader:
         max_path = os.path.join(self.base_path, exp_name, "MaxValues", "max_values.npy")
         return np.load(max_path) if os.path.exists(max_path) else np.array([])
     
+    def _load_max_values_cropped(self, exp_name):
+        """Loads max values from a single file."""
+        max_path = os.path.join(self.base_path, exp_name, "MaxValuesCropped", "max_values.npy")
+        return np.load(max_path) if os.path.exists(max_path) else np.array([])
+
     def _load_max_values2(self, exp_name):
         """Loads max values from a single file."""
         max_path = os.path.join(self.base_path, exp_name, "MaxValuesAntenna1", "max_values.npy")
@@ -299,11 +307,15 @@ class DopplerDataset(Dataset):
         
         self.force_max_to_0 = param["DATASET"].get("FORCE_MAX_TO_0", False)
         self.standardize_labels = param["DATASET"].get("STANDARDIZE_LABELS", True)
+        self.use_median_labels = param["DATASET"].get("USE_MEDIAN_LABELS", False)
 
         self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
         self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
 
         self.fold_number = param["DATASET"].get("FOLD_NUMBER", 1)
+
+        # Set numpy random seed for reproducibility
+        np.random.seed(random_seed)
 
         self.data_loader = data_loader
         self.sub_sample_factor = sub_sample_factor
@@ -330,7 +342,7 @@ class DopplerDataset(Dataset):
         self.std_max_values2 = np.std(self.data_loader.get_max_values2())
 
         # Split des données (3 modes différents)
-        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_exp(fold_number=self.fold_number) #self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
+        self.train_indices, self.val_indices, self.test_indices = self._split_dataset_by_exp(fold_number=self.fold_number, suffle=shuffle) #self._split_dataset_by_blocks() #self._split_dataset(shuffle, random_seed)
 
         if self.mode == "train":
             self.data_indices = self.train_indices
@@ -375,7 +387,7 @@ class DopplerDataset(Dataset):
                 data_indices.append((exp, i))  # i = frame cible
         return np.array(data_indices)
 
-    def _split_dataset_by_exp(self, fold_number: int):
+    def _split_dataset_by_exp(self, fold_number: int, shuffle: bool = True):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, "folds_config.yaml")
 
@@ -395,6 +407,10 @@ class DopplerDataset(Dataset):
         train_indices = [idx for idx in data_indices if idx[0] in train_exps]
         val_indices = [idx for idx in data_indices if idx[0] in val_exps]
         test_indices = [idx for idx in data_indices if idx[0] in test_exps]
+
+        # Si shuffle est True, mélange les indices d'entrainement
+        if shuffle:
+            np.random.shuffle(train_indices)
 
         return train_indices, val_indices, test_indices
 
@@ -470,6 +486,8 @@ class DopplerDataset(Dataset):
         img_stack = []
         max_stack = []
 
+        labels = []
+
         if self.use_prev_frames:
             indices = range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps)
         else:
@@ -478,6 +496,7 @@ class DopplerDataset(Dataset):
         for i in indices:
             img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="magnitude"))
             max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=1))
+            labels.append(self._load_label(exp_name, i))
 
             if self.activePhase:
                 img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="phase"))
@@ -499,7 +518,12 @@ class DopplerDataset(Dataset):
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
 
-        label_tensor = self._load_label(exp_name, image_index)
+        # Compute median of labels
+        if self.use_median_labels:
+            label_median = np.median(labels)
+            label_tensor = torch.tensor(label_median, dtype=torch.float32)
+        else:
+            label_tensor = torch.tensor(labels[-1], dtype=torch.float32)
 
         return img_tensor, max_tensor, label_tensor
 
