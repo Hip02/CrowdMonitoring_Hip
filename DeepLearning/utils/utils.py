@@ -568,7 +568,7 @@ class DopplerDataset(Dataset):
         else:
             if self.standardize_labels:
                 label = (label - self.mean_label) / self.std_label
-            return torch.tensor([label], dtype=torch.float32)
+            return label
 
     
 def plot_learning_curves(train_losses, val_losses, results_path, file_name="learning_curve",title="Learning Curves"):
