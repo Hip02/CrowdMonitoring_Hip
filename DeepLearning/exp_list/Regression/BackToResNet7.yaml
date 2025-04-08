@@ -16,6 +16,20 @@ TRAINING:
   DEVICE: cuda 
 
 augmentation:
+  flip_rotation:
+    enable: false
+    prob_apply: 0.5
+
+  color:
+    enable: false
+
+  noise_blur:
+    enable: false
+    prob_apply: 0.5
+    prob_noise_vs_blur: 0.5
+    gaussian_noise_std: [0.01, 0.02]
+    blur_std: [2.5, 3.0]
+
   mixup:
     enable: true
     prob_apply: 1.0
