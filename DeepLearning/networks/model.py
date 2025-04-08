@@ -215,6 +215,10 @@ class Network_Class:
                 torch.save(best_model.state_dict(), wghtsPath + '/wghts.pkl')
                 print("💾 Modèle sauvegardé (à chaque epoch)")
 
+                # Save losses as numpy arrays
+                np.save(os.path.join(self.resultsPath, 'train_losses.npy'), np.array(train_losses))
+                np.save(os.path.join(self.resultsPath, 'val_losses.npy'), np.array(val_losses))
+
         return train_losses, val_losses
 
 

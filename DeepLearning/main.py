@@ -54,8 +54,5 @@ print(f"{len(myNetwork.dataSetTrain)} samples in training set")
 print(f"{len(myNetwork.dataSetTest)} samples in test set")
 print(f"{len(myNetwork.dataSetVal)} samples in validation set")
 
-train_losses, val_losses = myNetwork.visualize_data_augmentation() #train()
-
-# Save results
-np.save(os.path.join(resultsPath, 'train_losses.npy'), train_losses)
-np.save(os.path.join(resultsPath, 'val_losses.npy'), val_losses)
+#train_losses, val_losses = myNetwork.train()
+myNetwork.visualize_data_augmentation()
