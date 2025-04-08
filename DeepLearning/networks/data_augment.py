@@ -59,6 +59,11 @@ class DataAugmentor:
             y_images, y_max, y_labels = [], [], []
             for idx in indices:
                 y_image, max_val, label = self.data_loader.dataset[idx]
+                # Transfer on GPU
+                y_image = y_image.to(x.device)
+                max_val = max_val.to(x.device)
+                label = label.to(x.device)
+
                 y_images.append(y_image)
                 y_max.append(max_val)
                 y_labels.append(label)
