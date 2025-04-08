@@ -58,7 +58,7 @@ class DataAugmentor:
             # Accéder à un batch entier du DataLoader, et récupérer les images, max et labels
             y_images, y_max, y_labels = [], [], []
             for idx in indices:
-                y_image, max_val, label = self.data_loader[idx]
+                y_image, max_val, label = self.data_loader.dataset[idx]
                 y_images.append(y_image)
                 y_max.append(max_val)
                 y_labels.append(label)
@@ -95,5 +95,5 @@ class DataAugmentor:
 
         # Retour à (B, C, H, W)
         x = x.squeeze(2)
-        
+
         return x, max_doppler, labels
