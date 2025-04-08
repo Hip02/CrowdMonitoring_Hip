@@ -146,8 +146,8 @@ class Network_Class:
                 labels = labels.to(self.device)
 
                 if self.data_augm:
-                    data_augmentor = DataAugmentor(config=self.config)
-                    image_magnitude = data_augmentor.apply(image_magnitude)
+                    data_augmentor = DataAugmentor(self.config, self.trainDataLoader)
+                    image_magnitude, max_doppler, labels = data_augmentor.apply(image_magnitude, max_doppler, labels)
 
                 if self.predictionType == "regression":
                     labels = labels.view(-1, 1)
@@ -380,7 +380,7 @@ class Network_Class:
             print("Data augmentation is not enabled in the configuration file.")
             return
 
-        data_augmentor = DataAugmentor(config=self.config)
+        data_augmentor = DataAugmentor(self.config, self.trainDataLoader)
 
         # Récupérer un batch
         image_magnitude, _, _ = next(iter(self.trainDataLoader))

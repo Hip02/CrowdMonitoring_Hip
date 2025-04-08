@@ -52,7 +52,7 @@ param["DATASET"]["FOLD_NUMBER"] = fold
 resultsPath = os.path.join("results", exp, f"fold{fold}")
 os.makedirs(resultsPath, exist_ok=True)
 
-data_loader = DataLoader(base_path, exp_list=all)
+data_loader = DataLoader(base_path, param, exp_list=all)
 myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
 myNetwork.loadWeight()
