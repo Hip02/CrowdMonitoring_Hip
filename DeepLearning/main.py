@@ -54,6 +54,6 @@ print(f"{len(myNetwork.dataSetTrain)} samples in training set")
 print(f"{len(myNetwork.dataSetTest)} samples in test set")
 print(f"{len(myNetwork.dataSetVal)} samples in validation set")
 
-#train_losses, val_losses = myNetwork.train()
-for idx in range(4):
-    myNetwork.visualize_data_augmentation(idx=idx)
+train_losses, val_losses = myNetwork.train()
+#for idx in range(4):
+#    myNetwork.visualize_data_augmentation(idx=idx)
