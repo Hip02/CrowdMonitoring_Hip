@@ -49,6 +49,9 @@ class DataAugmentor:
 
         # --- Mixup ---
         if self.cfg['mixup']['enable'] and random.random() < self.cfg['mixup']['prob_apply']:
+            # Print entering shapes
+            print(f"Entering Mixup: x shape: {x.shape}, max_doppler shape: {max_doppler.shape}, labels shape: {labels.shape}")
+
             # Récupérer un batch de données complet
             batch_size = x.size(0)  # B (taille du batch)
 
@@ -97,6 +100,9 @@ class DataAugmentor:
             new_max = (max_val + y_max) / 2
             # Restandardiser
             max_doppler = (new_max - mean_max) / std_max
+
+            # Print exiting shapes
+            print(f"Exiting Mixup: x shape: {x.shape}, max_doppler shape: {max_doppler.shape}, labels shape: {labels.shape}")
 
         # Retour à (B, C, H, W)
         x = x.squeeze(2)
