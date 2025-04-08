@@ -395,13 +395,15 @@ class Network_Class:
         data_augmentor = DataAugmentor(self.config, self.trainDataLoader)
 
         # Récupérer un batch
-        image_magnitude, _, _ = next(iter(self.trainDataLoader))
+        image_magnitude, max_doppler, label = next(iter(self.trainDataLoader))
 
         # Ne pas dépasser la taille du batch
         num_images = min(num_images, image_magnitude.shape[0])
 
         # Sélection des images à afficher
         images_to_show = image_magnitude[:num_images]
+        max_doppler_to_show = max_doppler[:num_images]
+        labels_to_show = label[:num_images]
 
         # Appliquer les augmentations
         augmented_images = torch.stack([data_augmentor.apply(img.unsqueeze(0)).squeeze(0) for img in images_to_show])
@@ -415,7 +417,7 @@ class Network_Class:
         for i in range(num_images):
             # Original
             axes[i][0].imshow(originals[i][0], cmap='gray')
-            axes[i][0].set_title("Original")
+            axes[i][0].set_title(f"Original - Label = {labels_to_show[i]:.2f} ({int(labels_to_show[i] * self.dataSetTrain.std_label + self.dataSetTrain.mean_label)} people)")
             axes[i][0].axis("off")
 
             # Augmentée
@@ -424,4 +426,4 @@ class Network_Class:
             axes[i][1].axis("off")
 
         plt.tight_layout()
-        plt.show()
+        plt.savefig("" + self.resultsPath + "/_Augmentation/augmented_images.pdf")
