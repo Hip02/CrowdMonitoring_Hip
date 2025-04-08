@@ -1,0 +1,31 @@
+---
+DATASET:
+  FOLD_NUMBER: 0
+  FORCE_MAX_TO_0 : True
+
+MODEL:
+  NB_CHANNELS: 64
+
+TRAINING: 
+  PREDICTION_TYPE: regression
+  RESNET_TYPE: resnet18
+  LEARNING_RATE: 0.00005
+  EPOCH: 20
+  BATCH_SIZE: 16
+  DEVICE: cuda 
+
+augmentation:
+  flip_rotation:
+    enable: false
+
+  color:
+    enable: false
+
+  noise_blur:
+    enable: false
+
+  mixup:
+    enable: true
+    prob_apply: 0.25
+    min_maps: 1
+    max_maps: 2
