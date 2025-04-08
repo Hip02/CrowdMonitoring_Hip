@@ -421,7 +421,7 @@ class Network_Class:
         augmented_labels_to_show = augmented_labels.cpu().numpy()
 
         # Création de la figure
-        fig, axes = plt.subplots(num_images, 2, figsize=(6, 3 * num_images))
+        fig, axes = plt.subplots(num_images, 2, figsize=(10, 3 * num_images))
         for i in range(num_images):
             # Original
             axes[i][0].imshow(originals[i][0], cmap='gray')
