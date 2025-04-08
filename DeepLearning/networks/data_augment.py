@@ -67,12 +67,18 @@ class DataAugmentor:
                 max_val = max_val.to(x.device)
                 label = label.to(x.device)
 
+                # Print 1-image shape 
+                print(f"1-image shape: {y_image.shape}")
+
                 y_images.append(y_image)
                 y_max.append(max_val)
                 y_labels.append(label)
 
             # Convertir les listes en tenseurs
             y_images = torch.stack(y_images)
+
+            print(f"y_images shape: {y_images.shape}")
+
             y_max = torch.stack(y_max)
             y_labels = torch.stack(y_labels)
 
