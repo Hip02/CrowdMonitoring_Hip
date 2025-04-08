@@ -406,11 +406,13 @@ class Network_Class:
         labels_to_show = label[:num_images]
 
         # Appliquer les augmentations
-        augmented_images = torch.stack([data_augmentor.apply(img.unsqueeze(0)).squeeze(0) for img in images_to_show])
+        augmented_images, augmented_max_doppler, augmented_labels = data_augmentor.apply(images_to_show, max_doppler_to_show, labels_to_show)
 
         # Passage en numpy
         originals = images_to_show.cpu().numpy()
         augmenteds = augmented_images.cpu().numpy()
+        max_dopplers = max_doppler_to_show.cpu().numpy()
+        labels_to_show = labels_to_show.cpu().numpy()
 
         # Création de la figure
         fig, axes = plt.subplots(num_images, 2, figsize=(6, 3 * num_images))
