@@ -76,6 +76,7 @@ class DataAugmentor:
 
             # Convertir les listes en tenseurs
             y_images = torch.stack(y_images)
+            y_images = y_images.unsqueeze(2)  # (B, C, 1, H, W)
 
             print(f"y_images shape: {y_images.shape}")
 
