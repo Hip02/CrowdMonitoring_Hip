@@ -49,9 +49,6 @@ class DataAugmentor:
 
         # --- Mixup ---
         if self.cfg['mixup']['enable'] and random.random() < self.cfg['mixup']['prob_apply']:
-            # Print entering shapes
-            print(f"Entering Mixup: x shape: {x.shape}, max_doppler shape: {max_doppler.shape}, labels shape: {labels.shape}")
-
             # Récupérer un batch de données complet
             batch_size = x.size(0)  # B (taille du batch)
 
@@ -67,9 +64,6 @@ class DataAugmentor:
                 max_val = max_val.to(x.device)
                 label = label.to(x.device)
 
-                # Print 1-image shape 
-                print(f"1-image shape: {y_image.shape}")
-
                 y_images.append(y_image)
                 y_max.append(max_val)
                 y_labels.append(label)
@@ -77,9 +71,6 @@ class DataAugmentor:
             # Convertir les listes en tenseurs
             y_images = torch.stack(y_images)
             y_images = y_images.unsqueeze(2)  # (B, C, 1, H, W)
-
-            print(f"y_images shape: {y_images.shape}")
-
             y_max = torch.stack(y_max)
             y_labels = torch.stack(y_labels)
 
@@ -107,9 +98,6 @@ class DataAugmentor:
             new_max = (max_val + y_max) / 2
             # Restandardiser
             max_doppler = (new_max - mean_max) / std_max
-
-            # Print exiting shapes
-            print(f"Exiting Mixup: x shape: {x.shape}, max_doppler shape: {max_doppler.shape}, labels shape: {labels.shape}")
 
         # Retour à (B, C, H, W)
         x = x.squeeze(2)

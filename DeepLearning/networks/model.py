@@ -380,7 +380,7 @@ class Network_Class:
         plt.show()
 
 
-    def visualize_data_augmentation(self, num_images=4):
+    def visualize_data_augmentation(self, num_images=4, idx=0):
         """
         Affiche les images originales et leurs versions augmentées côte à côte.
 
@@ -417,6 +417,8 @@ class Network_Class:
         augmenteds = augmented_images.cpu().numpy()
         max_dopplers = max_doppler_to_show.cpu().numpy()
         labels_to_show = labels_to_show.cpu().numpy()
+        augmented_max_dopplers = augmented_max_doppler.cpu().numpy()
+        augmented_labels_to_show = augmented_labels.cpu().numpy()
 
         # Création de la figure
         fig, axes = plt.subplots(num_images, 2, figsize=(6, 3 * num_images))
@@ -428,10 +430,10 @@ class Network_Class:
 
             # Augmentée
             axes[i][1].imshow(augmenteds[i][0], cmap='gray')
-            axes[i][1].set_title("Augmented")
+            axes[i][1].set_title(f"Augmented - Label = {augmented_labels_to_show[i]:.2f} ({int(augmented_labels_to_show[i] * self.dataSetTrain.std_label + self.dataSetTrain.mean_label)} people)")
             axes[i][1].axis("off")
 
         plt.tight_layout()
         dir_to_create = self.resultsPath + "/_Augmentation/"
         createFolder(dir_to_create)
-        plt.savefig("" + self.resultsPath + "/_Augmentation/augmented_images.pdf")
+        plt.savefig("" + self.resultsPath + f"/_Augmentation/augmented_images{idx}.pdf")
