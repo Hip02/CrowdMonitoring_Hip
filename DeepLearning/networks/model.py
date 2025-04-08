@@ -23,10 +23,19 @@ from networks.data_augment import DataAugmentor
 
 import time
 from collections import defaultdict
+import random
 
-# Fix seed
-torch.manual_seed(42)
-np.random.seed(42)
+def set_seed(seed: int = 42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    # If you are using cuDNN, set the following flags to ensure reproducibility
+    # Note: This may slow down your training
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 
 def createFolder(desiredPath): 
     if not os.path.exists(desiredPath):
@@ -34,6 +43,9 @@ def createFolder(desiredPath):
 
 class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
+
+        set_seed(42)
+
         self.resultsPath    = resultsPath
         self.config         = param
         self.epoch          = param["TRAINING"]["EPOCH"]
