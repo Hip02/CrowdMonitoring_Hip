@@ -428,4 +428,6 @@ class Network_Class:
             axes[i][1].axis("off")
 
         plt.tight_layout()
+        dir_to_create = self.resultsPath + "/_Augmentation/"
+        createFolder(dir_to_create)
         plt.savefig("" + self.resultsPath + "/_Augmentation/augmented_images.pdf")
