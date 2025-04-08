@@ -50,7 +50,7 @@ class DataAugmentor:
         # --- Mixup ---
         if self.cfg['mixup']['enable'] and random.random() < self.cfg['mixup']['prob_apply']:
             batch_size = x.size(0)
-            
+
             nb_maps = random.randint(self.cfg['mixup'].get('min_maps', 1), self.cfg['mixup'].get('max_maps', 3))
 
             # Initialisation accumulations
@@ -86,8 +86,8 @@ class DataAugmentor:
                 # Déstandardiser puis accumuler les max
                 total_max += y_max * std_max + mean_max
 
-            # Appliquer le mixup : additionner les cartes
-            x = x + total_images
+            # Appliquer le mixup : additionner les cartes (et en prendre la moyenne)
+            x = (x + total_images) / (nb_maps + 1)
 
             # Labels : ajouter puis re-standardiser
             labels = (labels * std_label + mean_label) + total_labels
