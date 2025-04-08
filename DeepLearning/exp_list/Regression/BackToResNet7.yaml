@@ -33,3 +33,5 @@ augmentation:
   mixup:
     enable: true
     prob_apply: 1.0
+    min_maps: 2
+    max_maps: 4

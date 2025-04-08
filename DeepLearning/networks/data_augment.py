@@ -49,55 +49,55 @@ class DataAugmentor:
 
         # --- Mixup ---
         if self.cfg['mixup']['enable'] and random.random() < self.cfg['mixup']['prob_apply']:
-            # Récupérer un batch de données complet
-            batch_size = x.size(0)  # B (taille du batch)
-
-            # Sélectionner des indices aléatoires différents pour chaque image du batch
-            indices = torch.randint(0, len(self.data_loader), (batch_size,))  # indices pour chaque sample du batch
+            batch_size = x.size(0)
             
-            # Accéder à un batch entier du DataLoader, et récupérer les images, max et labels
-            y_images, y_max, y_labels = [], [], []
-            for idx in indices:
-                y_image, max_val, label = self.data_loader.dataset[idx]
-                # Transfer on GPU
-                y_image = y_image.to(x.device)
-                max_val = max_val.to(x.device)
-                label = label.to(x.device)
+            nb_maps = random.randint(self.cfg['mixup'].get('min_maps', 1), self.cfg['mixup'].get('max_maps', 3))
 
-                y_images.append(y_image)
-                y_max.append(max_val)
-                y_labels.append(label)
+            # Initialisation accumulations
+            total_images = torch.zeros_like(x)
+            total_labels = torch.zeros_like(labels)
+            total_max = torch.zeros_like(max_doppler)
 
-            # Convertir les listes en tenseurs
-            y_images = torch.stack(y_images)
-            y_images = y_images.unsqueeze(2)  # (B, C, 1, H, W)
-            y_max = torch.stack(y_max)
-            y_labels = torch.stack(y_labels)
-
-            # Appliquer MixUp avec lambda = 0.5
-            x = 0.5 * x + 0.5 * y_images
-
-            # Mélanger les labels (additionner)
-            # De-standardiser les labels
             mean_label = self.data_loader.dataset.mean_label
             std_label = self.data_loader.dataset.std_label
-            y_labels = y_labels * std_label + mean_label
-            labels = labels * std_label + mean_label
-            new_labels = labels + y_labels
-            # Restandardiser
-            labels = (new_labels - mean_label) / std_label
-
-
-            # Calculer la moyenne des max
-            # De-standardiser les max
             mean_max = self.data_loader.dataset.mean_max_values
             std_max = self.data_loader.dataset.std_max_values
-            y_max = y_max * std_max + mean_max
+
+            for _ in range(nb_maps):
+                # Tirer un indice aléatoire pour chaque image du batch
+                indices = torch.randint(0, len(self.data_loader), (batch_size,))
+                y_images, y_labels, y_max = [], [], []
+
+                for idx in indices:
+                    y_image, max_val, label = self.data_loader.dataset[idx]
+                    y_images.append(y_image.to(x.device))
+                    y_labels.append(label.to(x.device))
+                    y_max.append(max_val.to(x.device))
+
+                y_images = torch.stack(y_images).unsqueeze(2)  # (B, C, 1, H, W)
+                y_labels = torch.stack(y_labels)
+                y_max = torch.stack(y_max)
+
+                total_images += y_images
+
+                # Déstandardiser puis accumuler les labels
+                total_labels += y_labels * std_label + mean_label
+
+                # Déstandardiser puis accumuler les max
+                total_max += y_max * std_max + mean_max
+
+            # Appliquer le mixup : additionner les cartes
+            x = x + total_images
+
+            # Labels : ajouter puis re-standardiser
+            labels = (labels * std_label + mean_label) + total_labels
+            labels = (labels - mean_label) / std_label
+
+            # Max doppler : moyenne puis re-standardiser
             max_val = max_doppler * std_max + mean_max
-            # Calculer les nouvelles valeurs max
-            new_max = (max_val + y_max) / 2
-            # Restandardiser
-            max_doppler = (new_max - mean_max) / std_max
+            max_val = (max_val + total_max) / (nb_maps + 1)
+            max_doppler = (max_val - mean_max) / std_max
+
 
         # Retour à (B, C, H, W)
         x = x.squeeze(2)
