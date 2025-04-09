@@ -302,6 +302,61 @@ class Network_Class:
             createFolder(self.resultsPath + '/_ConfusionMatrix/')
             plt.savefig(self.resultsPath + '/_ConfusionMatrix/confusion_matrix.pdf')
 
+            # 📊 Barplot des erreurs (%) par label entier
+            errors_per_label = {}
+            total_per_label = {}
+
+            for true, pred in zip(all_labels, rounded_preds):
+                total_per_label[true] = total_per_label.get(true, 0) + 1
+                if true != pred:
+                    errors_per_label[true] = errors_per_label.get(true, 0) + 1
+
+            labels_sorted = sorted(total_per_label.keys())
+            error_rates = [(errors_per_label.get(label, 0) / total_per_label[label]) * 100 for label in labels_sorted]
+
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x=labels_sorted, y=error_rates, color="salmon")
+            plt.ylabel("Erreur (%)")
+            plt.xlabel("Label (entier)")
+            plt.title("Taux d'erreur par label (en %)")
+            plt.grid(True)
+            plt.tight_layout()
+            createFolder(self.resultsPath + "/_ErrorAnalysis/")
+            plt.savefig(self.resultsPath + "/_ErrorAnalysis/error_per_label.pdf")
+
+            # 📉 Analyse de calibration (erreur moyenne vs vrai label)
+            calibration_bias = {}
+            count_per_label = {}
+
+            for true, pred in zip(all_labels, all_preds):
+                calibration_bias[true] = calibration_bias.get(true, 0) + (pred - true)
+                count_per_label[true] = count_per_label.get(true, 0) + 1
+
+            bias_per_label = [calibration_bias[l] / count_per_label[l] for l in labels_sorted]
+
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x=labels_sorted, y=bias_per_label, color="skyblue")
+            plt.axhline(0, color='black', linestyle='--')
+            plt.ylabel("Biais moyen (prédit - vrai)")
+            plt.xlabel("Label")
+            plt.title("Analyse de calibration : Sur ou sous-estimation")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(self.resultsPath + "/_ErrorAnalysis/calibration_bias.pdf")
+
+            # 📊 Distribution des erreurs absolues
+            errors = np.abs(all_preds - all_labels)
+
+            plt.figure(figsize=(8, 6))
+            sns.histplot(errors, bins=30, kde=True, color="purple")
+            plt.xlabel("Erreur absolue")
+            plt.ylabel("Nombre d'échantillons")
+            plt.title("Distribution des erreurs absolues")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(self.resultsPath + "/_ErrorAnalysis/error_distribution.pdf")
+
+
             return mean_loss
 
         else:  # Classification
