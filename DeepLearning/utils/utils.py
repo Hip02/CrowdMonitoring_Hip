@@ -582,9 +582,9 @@ def plot_learning_curves(train_losses, val_losses, results_path, file_name="lear
     plt.legend()
     plt.grid(True)
     # Os make dir
-    #y_min = 0
-    #y_max = 0.5
-    #plt.ylim(y_min, y_max)
+    y_min = 0
+    y_max = 1.5
+    plt.ylim(y_min, y_max)
 
     os.makedirs(results_path + "/_LearningCurves", exist_ok=True)
     plt.savefig(results_path + f"/_LearningCurves/{file_name}.pdf")

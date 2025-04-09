@@ -34,36 +34,38 @@ if crop_index == None: crop_index = len(input_videos_filenames)
 for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_videos_filenames[:crop_index], input_radar_raw_filenames[:crop_index])):
     print(f"Processing {input_video_filename} and {input_radar_raw_filename}")
 
-    radar_data = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=antenna_i, cropCenter=cropCenter)
-    timestamps = radar_data['timestamps']
+    radar_data0 = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=0, cropCenter=cropCenter)
+    radar_data1 = process_radar_file(input_radar_raw_filename, saveMagn=True, savePhase=True, iAntennaShow=1, cropCenter=cropCenter)
+    #timestamps = radar_data0['timestamps']
     #video_data = process_video_file(input_video_filename, timestamps, saveFrames=True)
 
     # Load Labels
     labels_saved = np.load(f"{base_path}/{exp_names[f]}/Labels/labels.npy")
     n_labels = len(labels_saved)
 
-    n_radar_maps = len(radar_data['magnitudes'])
+    n_radar_maps = len(radar_data0['magnitudes'])
     #n_labels = len(video_data['labels'])
 
-    max_values = []
-    min_values = []
+    #max_values = []
+    #min_values = []
 
     for i in range(min(n_radar_maps, n_labels)):
         #save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudes")
-        #save_radar_maps(radar_data['phases'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarPhases")
-        save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesCropped")
+        diff_of_phases = radar_data1['phases'][i] - radar_data0['phases'][i]
+        save_radar_maps(diff_of_phases, i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhases")
+        #save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesCropped")
         #save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")
-        max_values.append(radar_data['magnitudes'][i].max())
-        min_values.append(radar_data['magnitudes'][i].min())
+        #max_values.append(radar_data['magnitudes'][i].max())
+        #min_values.append(radar_data['magnitudes'][i].min())
 
     # Save max values for antenna 1 as a numpy array into a new folder
-    os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesCropped", exist_ok=True)
-    np.save(f"{base_path}/{exp_names[f]}/MaxValuesCropped/max_values.npy", np.array(max_values))
+    #os.makedirs(f"{base_path}/{exp_names[f]}/MaxValuesCropped", exist_ok=True)
+    #np.save(f"{base_path}/{exp_names[f]}/MaxValuesCropped/max_values.npy", np.array(max_values))
 
     # Save min values for antenna 1 as a numpy array into a new folder
-    os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesCropped", exist_ok=True)
-    np.save(f"{base_path}/{exp_names[f]}/MinValuesCropped/min_values.npy", np.array(min_values))
+    #os.makedirs(f"{base_path}/{exp_names[f]}/MinValuesCropped", exist_ok=True)
+    #np.save(f"{base_path}/{exp_names[f]}/MinValuesCropped/min_values.npy", np.array(min_values))
 
     # Save the labels as a numpy array into a new folder
     #os.makedirs(f"{base_path}/{exp_names[f]}/Labels", exist_ok=True)
@@ -78,10 +80,11 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     #np.save(f"{base_path}/{exp_names[f]}/MinValues/min_values.npy", np.array(min_values))
 
     # ✅ Libération de la mémoire après chaque vidéo
-    del radar_data
+    del radar_data0
+    del radar_data1
     #del video_data
-    del timestamps
-    del max_values
-    del min_values
+    #del timestamps
+    #del max_values
+    #del min_values
 
     gc.collect()  # Forcer la récupération de mémoire
