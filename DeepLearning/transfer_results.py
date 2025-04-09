@@ -10,7 +10,7 @@ local_destinations = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
 folder_name = "BackToResNet"
-_range = range(5, 7)
+_range = range(1, 2)
 local_destinations = os.path.join(local_destinations, folder_name)
 local_destinations = [f"{local_destinations}{i}" for i in _range]
 
