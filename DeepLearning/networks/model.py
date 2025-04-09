@@ -18,6 +18,8 @@ from torch.utils.data import random_split
 import torch.nn as nn
 import torch.optim
 import torchvision.transforms.functional as TF
+import torch.nn.functional as F
+
 
 from networks.data_augment import DataAugmentor
 
@@ -233,6 +235,9 @@ class Network_Class:
             all_labels = []
 
             with torch.no_grad():
+
+                worst_losses = []  # Liste de tuples : (loss, pred, label, image)
+
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
@@ -243,6 +248,23 @@ class Network_Class:
                     #outputs = self.model(image_magnitude)
                     outputs = self.model(image_magnitude, max_doppler)
                     loss = self.criterion(outputs, labels)
+
+                    # Store the worst losses
+                    individual_losses = F.mse_loss(outputs, labels, reduction='none').view(-1).cpu().numpy()
+                    preds = outputs.detach().cpu().numpy().flatten()
+                    lbls = labels.cpu().numpy().flatten()
+                    imgs = image_magnitude.cpu().numpy()
+
+                    for i in range(len(preds)):
+                        loss_i = individual_losses[i]
+                        case = (loss_i, preds[i], lbls[i], imgs[i])
+                        if len(worst_losses) < 5:
+                            worst_losses.append(case)
+                            worst_losses.sort(reverse=True, key=lambda x: x[0])
+                        elif loss_i > worst_losses[-1][0]:
+                            worst_losses[-1] = case
+                            worst_losses.sort(reverse=True, key=lambda x: x[0])
+
 
                     batch_size = labels.size(0)
                     total_loss += loss.item() * batch_size
@@ -362,6 +384,23 @@ class Network_Class:
             print(f"📊 Error Distribution Plotted")
 
 
+            # 📷 Visualisation des 5 pires échecs
+            createFolder(self.resultsPath + '/_FailureCases/')
+            for idx, (loss_i, pred_i, label_i, img_i) in enumerate(worst_losses):
+                # Denormalize prediction and label
+                pred_i = pred_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
+                label_i = label_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
+                loss_denorm = (pred_i - label_i) ** 2
+
+                plt.figure(figsize=(6, 5))
+                plt.imshow(img_i[0], cmap='viridis')  # Assume img_i has shape (1, H, W)
+                plt.title(f"Failure Case #{idx+1}\nTrue: {label_i:.1f} | Pred: {pred_i:.1f} | Loss: {loss_denorm:.2f}")
+                plt.axis('off')
+                plt.tight_layout()
+                plt.savefig(f"{self.resultsPath}/_FailureCases/case_{idx+1}.pdf")
+                plt.close()
+
+
             return mean_loss
 
         else:  # Classification
@@ -400,7 +439,9 @@ class Network_Class:
             plt.tight_layout()
             plt.show()
 
+
         return accuracy
+    
     def visualize_batch(self, num_images=4):
         """
         Affiche un batch d'images Doppler avec leurs labels et valeurs max Doppler.
