@@ -527,6 +527,17 @@ class DopplerDataset(Dataset):
 
         return img_tensor, max_tensor, label_tensor
 
+    def get_exp_and_frame(self, idx):
+        """
+        Récupère le nom de l'expérience et l'index de la frame pour un index donné.
+
+        Args:
+            idx (int): Index du dataset.
+
+        Returns:
+            tuple: (nom de l'expérience, index de la frame)
+        """
+        return self.data_indices[idx]
 
     def _load_and_preprocess_image(self, exp_name, image_index, type="magnitude", antenna=1):
 

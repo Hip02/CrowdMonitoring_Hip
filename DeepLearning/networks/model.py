@@ -237,7 +237,7 @@ class Network_Class:
             with torch.no_grad():
 
                 worst_losses = []  # Liste de tuples : (loss, pred, label, image)
-
+                sample_index = 0
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
@@ -257,7 +257,8 @@ class Network_Class:
 
                     for i in range(len(preds)):
                         loss_i = individual_losses[i]
-                        case = (loss_i, preds[i], lbls[i], imgs[i])
+                        case_index = sample_index + i  # index global dans le dataset
+                        case = (loss_i, preds[i], lbls[i], imgs[i], case_index)
                         if len(worst_losses) < 5:
                             worst_losses.append(case)
                             worst_losses.sort(reverse=True, key=lambda x: x[0])
@@ -265,7 +266,9 @@ class Network_Class:
                             worst_losses[-1] = case
                             worst_losses.sort(reverse=True, key=lambda x: x[0])
 
+                    sample_index += len(preds)
 
+                    
                     batch_size = labels.size(0)
                     total_loss += loss.item() * batch_size
                     total_samples += batch_size
@@ -384,21 +387,27 @@ class Network_Class:
             print(f"📊 Error Distribution Plotted")
 
 
-            # 📷 Visualisation des 5 pires échecs
-            createFolder(self.resultsPath + '/_FailureCases/')
-            for idx, (loss_i, pred_i, label_i, img_i) in enumerate(worst_losses):
-                # Denormalize prediction and label
+            # 📷 Visualisation des pires échecs avec informations d'expérience/frame
+            for idx, (loss_i, pred_i, label_i, img_i, index_i) in enumerate(worst_losses):
+
+                # Récupération du nom d'expérience et de la frame
+                exp_name, frame_idx = self.testDataLoader.dataset.get_exp_and_frame(index_i)
+
+                # Denormalize
                 pred_i = pred_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
                 label_i = label_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
                 loss_denorm = (pred_i - label_i) ** 2
 
                 plt.figure(figsize=(6, 5))
-                plt.imshow(img_i[0], cmap='viridis')  # Assume img_i has shape (1, H, W)
-                plt.title(f"Failure Case #{idx+1}\nTrue: {label_i:.1f} | Pred: {pred_i:.1f} | Loss: {loss_denorm:.2f}")
+                plt.imshow(img_i[0], cmap='viridis')
+                plt.title(f"Failure Case #{idx+1}\nExp: {exp_name}, Frame: {frame_idx}\nTrue: {label_i:.1f} | Pred: {pred_i:.1f}")
                 plt.axis('off')
                 plt.tight_layout()
                 plt.savefig(f"{self.resultsPath}/_FailureCases/case_{idx+1}.pdf")
                 plt.close()
+
+            
+                print(f"📷 Failure case #{idx+1} visualized")
 
 
             return mean_loss
