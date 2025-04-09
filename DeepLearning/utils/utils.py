@@ -113,7 +113,7 @@ class DataLoader:
     def _load_data(self, to_load):
         """Charge certaines données immédiatement, sauf les images, avec barre de chargement."""
         if to_load is None:
-            to_load = ["max_values", "max_values2","labels", "magnitudes", "magnitudes2"]
+            to_load = ["max_values", "max_values2","labels", "magnitudes", "phases"]
 
         # Utilisation de tqdm pour afficher une barre de progression
         for exp in tqdm(self.exp_list, desc="🔄 Chargement des données", unit="exp"):
@@ -131,10 +131,10 @@ class DataLoader:
 
             if self.cropped_radar_maps:
                 magnitudes_to_load = "RadarMagnitudesCropped"
-                phases_to_load = "RadarPhasesCropped"
+                phases_to_load = "RadarPhases"
             else:
                 magnitudes_to_load = "RadarMagnitudes"
-                phases_to_load = "RadarPhases"
+                phases_to_load = "RadarPhases_NOT_AVAILABLE"
 
             # Utilisation du proxy pour le chargement différé des images
             self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=False)
