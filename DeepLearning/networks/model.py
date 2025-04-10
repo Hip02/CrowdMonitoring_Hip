@@ -45,46 +45,82 @@ def createFolder(desiredPath):
 
 def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
     """
-    Plots model predictions versus ground truth (YOLO-based people counts)
-    over time for each experiment. Also plots the prediction error over time.
-
-    Parameters:
-    - results_by_experiment (dict): A dictionary with experiment names as keys and
-      dictionaries with 'frames', 'preds', and 'gts' as values.
-    - save_path (str): Directory where the plots will be saved.
+    Plots:
+    1. Model prediction vs ground truth (scatter, float)
+    2. Prediction error (float)
+    3. Rounded prediction vs ground truth (scatter, int)
+    4. Rounded prediction error (int)
     """
     createFolder(save_path)
 
     for exp_name, data in results_by_experiment.items():
-        frames = data["frames"]
+        frames = np.array(data["frames"])
         preds = np.array(data["preds"])
         gts = np.array(data["gts"])
         errors = preds - gts
 
-        # 📈 1. Plot predictions vs ground truth
+        preds_rounded = np.round(preds)
+        gts_rounded = np.round(gts)
+        errors_rounded = preds_rounded - gts_rounded
+
+        xticks = np.linspace(frames.min(), frames.max(), num=10, dtype=int)
+
+        # 1️⃣ Scatter: predictions vs ground truth
         plt.figure(figsize=(12, 5))
-        plt.plot(frames, gts, label="YOLO (Ground Truth)", linestyle="--", marker='o')
-        plt.plot(frames, preds, label="Model Prediction", linestyle="-", marker='x')
+        plt.scatter(frames, gts, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
+        plt.scatter(frames, preds, label="Model Prediction", marker='x', color='darkorange', alpha=0.6)
         plt.xlabel("Frame number")
         plt.ylabel("Number of people")
         plt.title(f"Experiment: {exp_name} — Prediction vs Ground Truth")
         plt.legend()
-        plt.grid(True)
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
         plt.tight_layout()
         plt.savefig(f"{save_path}/{exp_name}_pred_vs_gt.pdf")
         plt.close()
 
-        # 📉 2. Plot prediction error over time
+        # 2️⃣ Line: prediction error over time
         plt.figure(figsize=(12, 4))
-        plt.plot(frames, errors, label="Error (Prediction - Ground Truth)", color='crimson', marker='.')
+        plt.plot(frames, errors, label="Prediction Error (Prediction - Ground Truth)",
+                 color='crimson', marker='.', linewidth=1, alpha=0.7)
         plt.axhline(0, color='black', linestyle='--')
         plt.xlabel("Frame number")
-        plt.ylabel("Prediction error")
-        plt.title(f"Experiment: {exp_name} — Prediction Error per Frame")
-        plt.grid(True)
+        plt.ylabel("Error")
+        plt.title(f"Experiment: {exp_name} — Prediction Error over Time")
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
         plt.tight_layout()
         plt.savefig(f"{save_path}/{exp_name}_error.pdf")
         plt.close()
+
+        # 3️⃣ Scatter: rounded predictions vs ground truth
+        plt.figure(figsize=(12, 5))
+        plt.scatter(frames, gts_rounded, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
+        plt.scatter(frames, preds_rounded, label="Model Prediction (rounded)", marker='x', color='darkorange', alpha=0.6)
+        plt.xlabel("Frame number")
+        plt.ylabel("Number of people (rounded)")
+        plt.title(f"Experiment: {exp_name} — Rounded Prediction vs Ground Truth")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_rounded_pred_vs_gt.pdf")
+        plt.close()
+
+        # 4️⃣ Line: rounded error
+        plt.figure(figsize=(12, 4))
+        plt.plot(frames, errors_rounded, label="Rounded Prediction Error",
+                 color='teal', marker='.', linewidth=1, alpha=0.7)
+        plt.axhline(0, color='black', linestyle='--')
+        plt.xlabel("Frame number")
+        plt.ylabel("Error (rounded)")
+        plt.title(f"Experiment: {exp_name} — Rounded Prediction Error over Time")
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_rounded_error.pdf")
+        plt.close()
+
 
 class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
