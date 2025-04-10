@@ -158,6 +158,15 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         plt.savefig(f"{save_path}/{exp_name}_error_heatmap.pdf")
         plt.close()
 
+        # Save the results in raw numpy format
+        np.save(f"{save_path}/{exp_name}_frames.npy",frames)
+        np.save(f"{save_path}/{exp_name}_preds.npy", preds)
+        np.save(f"{save_path}/{exp_name}_gts.npy", gts)
+        np.save(f"{save_path}/{exp_name}_errors.npy", errors)
+        np.save(f"{save_path}/{exp_name}_errors_rounded.npy", errors_rounded)
+        np.save(f"{save_path}/{exp_name}_preds_rounded.npy", preds_rounded)
+        np.save(f"{save_path}/{exp_name}_gts_rounded.npy", gts_rounded)
+
 
 class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):

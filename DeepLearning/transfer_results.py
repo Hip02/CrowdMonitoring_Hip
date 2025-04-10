@@ -10,12 +10,12 @@ local_destinations = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip
 
 # --- Entrée utilisateur : nom du sous-dossier à transférer ---
 folder_name = "BackToResNet"
-_range = range(1, 2)
+_range = range(1, 9)
 local_destinations = os.path.join(local_destinations, folder_name)
-local_destinations = [f"{local_destinations}{i}" for i in _range]
+local_destinations = [f"{local_destinations}4" for i in _range]
 
 # On Betelgeuse
-subfolders = [f"Regression/{folder_name}{i}/fold5" for i in _range]
+subfolders = [f"Regression/{folder_name}4/fold{i}" for i in _range]
 
 for local_dest, subfolder in zip(local_destinations, subfolders):
     # --- Construction des chemins distants et locaux ---
