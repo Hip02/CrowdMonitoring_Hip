@@ -26,6 +26,7 @@ from networks.data_augment import DataAugmentor
 import time
 from collections import defaultdict
 import random
+from scipy.stats import mode
 
 def set_seed(seed: int = 42):
     random.seed(seed)
@@ -43,14 +44,21 @@ def createFolder(desiredPath):
     if not os.path.exists(desiredPath):
         os.makedirs(desiredPath)
 
+def aggregate_by_second(time, values, fps=16, method="mean"):
+    seconds = np.floor(time).astype(int)
+    unique_sec = np.unique(seconds)
+    agg_values = []
+
+    for sec in unique_sec:
+        mask = (seconds == sec)
+        if method == "mean":
+            agg_values.append(values[mask].mean())
+        elif method == "mode":
+            agg_values.append(mode(values[mask], keepdims=False).mode)
+
+    return unique_sec, np.array(agg_values)
+
 def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
-    """
-    Plots:
-    1. Model prediction vs ground truth (scatter, float)
-    2. Prediction error (float)
-    3. Rounded prediction vs ground truth (scatter, int)
-    4. Rounded prediction error (int)
-    """
     createFolder(save_path)
 
     for exp_name, data in results_by_experiment.items():
@@ -59,17 +67,19 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         gts = np.array(data["gts"])
         errors = preds - gts
 
-        preds_rounded = np.round(preds)
-        gts_rounded = np.round(gts)
+        preds_rounded = np.maximum(np.round(preds), 0)
+        gts_rounded = np.maximum(np.round(gts), 0)
         errors_rounded = preds_rounded - gts_rounded
 
-        xticks = np.linspace(frames.min(), frames.max(), num=10, dtype=int)
+        fps = 16
+        time = frames / fps
+        xticks = np.linspace(time.min(), time.max(), num=10)
 
-        # 1️⃣ Scatter: predictions vs ground truth
+        # 1. Prediction vs Ground Truth (float)
         plt.figure(figsize=(12, 5))
-        plt.scatter(frames, gts, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
-        plt.scatter(frames, preds, label="Model Prediction", marker='x', color='darkorange', alpha=0.6)
-        plt.xlabel("Frame number")
+        plt.scatter(time, gts, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
+        plt.scatter(time, preds, label="Model Prediction", marker='x', color='darkorange', alpha=0.6)
+        plt.xlabel("Time (s)")
         plt.ylabel("Number of people")
         plt.title(f"Experiment: {exp_name} — Prediction vs Ground Truth")
         plt.legend()
@@ -79,12 +89,12 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         plt.savefig(f"{save_path}/{exp_name}_pred_vs_gt.pdf")
         plt.close()
 
-        # 2️⃣ Line: prediction error over time
+        # 2. Error (float)
         plt.figure(figsize=(12, 4))
-        plt.plot(frames, errors, label="Prediction Error (Prediction - Ground Truth)",
+        plt.plot(time, errors, label="Prediction Error (Prediction - Ground Truth)",
                  color='crimson', marker='.', linewidth=1, alpha=0.7)
         plt.axhline(0, color='black', linestyle='--')
-        plt.xlabel("Frame number")
+        plt.xlabel("Time (s)")
         plt.ylabel("Error")
         plt.title(f"Experiment: {exp_name} — Prediction Error over Time")
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
@@ -93,12 +103,12 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         plt.savefig(f"{save_path}/{exp_name}_error.pdf")
         plt.close()
 
-        # 3️⃣ Scatter: rounded predictions vs ground truth
+        # 3. Rounded Prediction vs Ground Truth
         plt.figure(figsize=(12, 5))
-        plt.scatter(frames, gts_rounded, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
-        plt.scatter(frames, preds_rounded, label="Model Prediction (rounded)", marker='x', color='darkorange', alpha=0.6)
-        plt.xlabel("Frame number")
-        plt.ylabel("Number of people (rounded)")
+        plt.scatter(time, gts_rounded, label="YOLO (Ground Truth)", marker='o', color='royalblue', alpha=0.7)
+        plt.scatter(time, preds_rounded, label="Model Prediction (rounded)", marker='x', color='darkorange', alpha=0.6)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Number of People (Rounded)")
         plt.title(f"Experiment: {exp_name} — Rounded Prediction vs Ground Truth")
         plt.legend()
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
@@ -107,18 +117,45 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         plt.savefig(f"{save_path}/{exp_name}_rounded_pred_vs_gt.pdf")
         plt.close()
 
-        # 4️⃣ Line: rounded error
+        # 4. Error (rounded)
         plt.figure(figsize=(12, 4))
-        plt.plot(frames, errors_rounded, label="Rounded Prediction Error",
+        plt.plot(time, errors_rounded, label="Rounded Prediction Error",
                  color='teal', marker='.', linewidth=1, alpha=0.7)
         plt.axhline(0, color='black', linestyle='--')
-        plt.xlabel("Frame number")
+        plt.xlabel("Time (s)")
         plt.ylabel("Error (rounded)")
         plt.title(f"Experiment: {exp_name} — Rounded Prediction Error over Time")
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
         plt.xticks(xticks)
         plt.tight_layout()
         plt.savefig(f"{save_path}/{exp_name}_rounded_error.pdf")
+        plt.close()
+
+        # 5. Aggregated (per second) Prediction vs Ground Truth
+        sec, pred_avg = aggregate_by_second(time, preds, fps)
+        _, gt_avg = aggregate_by_second(time, gts, fps)
+
+        plt.figure(figsize=(12, 5))
+        plt.plot(sec, gt_avg, label="YOLO (GT) - avg/sec", linestyle='--', marker='o')
+        plt.plot(sec, pred_avg, label="Model Prediction - avg/sec", linestyle='-', marker='x')
+        plt.xlabel("Time (s)")
+        plt.ylabel("Avg. People Count")
+        plt.title(f"Experiment: {exp_name} — Aggregated Prediction vs Ground Truth (per second)")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_agg_pred_vs_gt.pdf")
+        plt.close()
+
+        # 6. Heatmap of error over time
+        plt.figure(figsize=(12, 1.5))
+        plt.imshow([errors], cmap='coolwarm', aspect='auto', extent=[time.min(), time.max(), 0, 1])
+        plt.colorbar(label="Prediction Error")
+        plt.yticks([])
+        plt.xlabel("Time (s)")
+        plt.title(f"Experiment: {exp_name} — Error Heatmap")
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_error_heatmap.pdf")
         plt.close()
 
 
