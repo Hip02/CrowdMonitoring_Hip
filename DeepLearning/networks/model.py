@@ -449,6 +449,8 @@ class Network_Class:
             plt.savefig(self.resultsPath + "/_ErrorAnalysis/error_distribution.pdf")
             print(f"📊 Error Distribution Plotted")
 
+            # Create directory for failure cases
+            createFolder(self.resultsPath + "/_FailureCases/")
 
             # 📷 Visualisation des pires échecs avec informations d'expérience/frame
             for idx, (loss_i, pred_i, label_i, img_i, index_i) in enumerate(worst_losses):
