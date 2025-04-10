@@ -43,6 +43,49 @@ def createFolder(desiredPath):
     if not os.path.exists(desiredPath):
         os.makedirs(desiredPath)
 
+def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
+    """
+    Plots model predictions versus ground truth (YOLO-based people counts)
+    over time for each experiment. Also plots the prediction error over time.
+
+    Parameters:
+    - results_by_experiment (dict): A dictionary with experiment names as keys and
+      dictionaries with 'frames', 'preds', and 'gts' as values.
+    - save_path (str): Directory where the plots will be saved.
+    """
+    createFolder(save_path)
+
+    for exp_name, data in results_by_experiment.items():
+        frames = data["frames"]
+        preds = np.array(data["preds"])
+        gts = np.array(data["gts"])
+        errors = preds - gts
+
+        # 📈 1. Plot predictions vs ground truth
+        plt.figure(figsize=(12, 5))
+        plt.plot(frames, gts, label="YOLO (Ground Truth)", linestyle="--", marker='o')
+        plt.plot(frames, preds, label="Model Prediction", linestyle="-", marker='x')
+        plt.xlabel("Frame number")
+        plt.ylabel("Number of people")
+        plt.title(f"Experiment: {exp_name} — Prediction vs Ground Truth")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_pred_vs_gt.pdf")
+        plt.close()
+
+        # 📉 2. Plot prediction error over time
+        plt.figure(figsize=(12, 4))
+        plt.plot(frames, errors, label="Error (Prediction - Ground Truth)", color='crimson', marker='.')
+        plt.axhline(0, color='black', linestyle='--')
+        plt.xlabel("Frame number")
+        plt.ylabel("Prediction error")
+        plt.title(f"Experiment: {exp_name} — Prediction Error per Frame")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_error.pdf")
+        plt.close()
+
 class Network_Class:
     def __init__(self, data_loader, param, resultsPath, sub_sample_factor=1):
 
@@ -238,6 +281,9 @@ class Network_Class:
 
                 worst_losses = []  # Liste de tuples : (loss, pred, label, image)
                 sample_index = 0
+
+                results_by_experience = {}
+
                 progress_bar = tqdm(self.testDataLoader, desc="Testing (regression)", unit="batch")
                 for image_magnitude, max_doppler, labels in progress_bar:
                     image_magnitude = image_magnitude.to(self.device)
@@ -256,6 +302,23 @@ class Network_Class:
                     imgs = image_magnitude.cpu().numpy()
 
                     for i in range(len(preds)):
+                        index_i = sample_index + i  # index local dans le batch
+                        # Récupération du nom d'expérience et de la frame
+                        exp_name, frame_idx = self.testDataLoader.dataset.get_exp_and_frame(index_i)
+                        pred_denorm = preds[i] * self.dataSetTest.std_label + self.dataSetTest.mean_label
+                        label_denorm = lbls[i] * self.dataSetTest.std_label + self.dataSetTest.mean_label
+
+                        if exp_name not in results_by_experience:
+                            results_by_experience[exp_name] = {
+                                'frames': [],
+                                'preds': [],
+                                'gts': []
+                            }
+
+                        results_by_experience[exp_name]['frames'].append(frame_idx)
+                        results_by_experience[exp_name]['preds'].append(pred_denorm)
+                        results_by_experience[exp_name]['gts'].append(label_denorm)
+
                         loss_i = individual_losses[i]
                         case_index = sample_index + i  # index global dans le dataset
                         case = (loss_i, preds[i], lbls[i], imgs[i], case_index)
@@ -396,7 +459,6 @@ class Network_Class:
                 # Denormalize
                 pred_i = pred_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
                 label_i = label_i * self.dataSetTest.std_label + self.dataSetTest.mean_label
-                loss_denorm = (pred_i - label_i) ** 2
 
                 plt.figure(figsize=(6, 5))
                 plt.imshow(img_i[0], cmap='viridis')
@@ -408,6 +470,14 @@ class Network_Class:
 
             
                 print(f"📷 Failure case #{idx+1} visualized")
+
+            
+            plot_predictions_vs_groundtruth(
+                results_by_experience,
+                save_path=self.resultsPath + "/_PerExperimentPlots/"
+            )
+            print("📊 Prediction vs Ground Truth Plots per Experiment saved.")
+
 
 
             return mean_loss
