@@ -54,7 +54,7 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
     createFolder(save_path)
 
     for exp_name, data in results_by_experiment.items():
-        frames = np.array(data["frames"])
+        frames = np.array(data["frames"], dtype=int)
         preds = np.array(data["preds"])
         gts = np.array(data["gts"])
         errors = preds - gts
