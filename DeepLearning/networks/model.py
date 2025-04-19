@@ -71,7 +71,7 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         gts_rounded = np.maximum(np.round(gts), 0)
         errors_rounded = preds_rounded - gts_rounded
 
-        fps = 16
+        fps = (100/6)
         time = frames / fps
         xticks = np.linspace(time.min(), time.max(), num=10)
 

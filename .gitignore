@@ -15,3 +15,6 @@ yolo*.pt
 
 # Ignorer les poids de modèle
 DeepLearning/results/
+
+# Ignorer les visualisations
+DeepLearning/visualizations/

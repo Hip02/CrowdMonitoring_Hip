@@ -6,6 +6,7 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from tqdm import tqdm
 import cv2
 import torch
@@ -13,6 +14,8 @@ from torch.utils.data import Dataset
 import torchvision.transforms as T
 import yaml
 from termcolor import colored
+from sklearn.metrics import mean_absolute_error
+
 
 
 class LazyImageLoader:
@@ -83,6 +86,62 @@ class LazyImageLoader:
         return str(self.file_list)
 
 
+class LazyVideoFrameLoader:
+    """Classe pour charger des frames vidéo à la demande, triées par le premier numéro dans le nom (ex: frame_4_2.jpg -> 4)."""
+
+    def __init__(self, directory, not_lazy=False):
+        self.not_lazy = not_lazy
+        self.directory = directory
+        self.file_list = self._get_sorted_files()
+
+        if self.not_lazy:
+            self.file_list_loaded = self._load_image_files()
+
+    def _get_sorted_files(self):
+        """Récupère et trie les fichiers .jpg/.jpeg selon le premier numéro dans leur nom (ex: frame_4_2.jpg -> 4)."""
+        if not os.path.exists(self.directory):
+            return []
+
+        files = [f for f in os.listdir(self.directory)
+                 if f.lower().endswith((".jpg", ".jpeg")) and not f.startswith("._") and not f.startswith(".")]
+
+        def extract_number(filename):
+            match = re.search(r'frame_(\d+)_\d+', filename)
+            return int(match.group(1)) if match else float('inf')
+
+        return sorted(files, key=extract_number)
+
+    def _load_image_files(self):
+        """Charge tous les fichiers .jpg/.jpeg dans un tableau numpy (RGB)."""
+        data = []
+        for file in tqdm(self.file_list, desc="Chargement des frames vidéo", unit="frame"):
+            file_path = os.path.join(self.directory, file)
+            img = cv2.imread(file_path)
+            if img is not None:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                data.append(img)
+        return np.array(data) if data else np.array([])
+
+    def load_frame(self, index):
+        """Charge une frame spécifique selon l'index trié."""
+        if self.not_lazy:
+            return self.file_list_loaded[index] if 0 <= index < len(self.file_list_loaded) else None
+        else:
+            if 0 <= index < len(self.file_list):
+                file_path = os.path.join(self.directory, self.file_list[index])
+                img = cv2.imread(file_path)
+                if img is not None:
+                    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            return None
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __str__(self):
+        return str(self.file_list)
+    
+
+
 class DataLoader:
     def __init__(self, base_path, param, exp_list=None, to_load=None):
         """
@@ -100,7 +159,7 @@ class DataLoader:
         self.data = {
             "min_values": {}, "max_values": {}, "min_values2": {},
             "max_values2" : {}, "labels": {}, "magnitudes": {},
-            "phases": {}, "magnitudes2": {}, "phases2": {}
+            "phases": {}, "magnitudes2": {}, "phases2": {}, "video_frames": {}
         }
 
         # Chargement immédiat des données (sauf les cartes radar)
@@ -128,6 +187,9 @@ class DataLoader:
                 self.data["max_values2"][exp] = self._load_max_values(exp)
             if "labels" in to_load: 
                 self.data["labels"][exp] = self._load_labels(exp)
+
+            if "video_frames" in to_load: 
+                self.data["video_frames"][exp] = LazyVideoFrameLoader(os.path.join(self.base_path, exp, "VideoFrames"), not_lazy=False)
 
             if self.cropped_radar_maps:
                 magnitudes_to_load = "RadarMagnitudesCropped"
@@ -166,6 +228,11 @@ class DataLoader:
         """Loads labels from a single file."""
         labels_path = os.path.join(self.base_path, exp_name, "Labels", "labels.npy")
         return np.load(labels_path) if os.path.exists(labels_path) else np.array([])
+
+    def _load_video_frames(self, exp_name):
+        """Loads all video frames for the experiment."""
+        video_path = os.path.join(self.base_path, exp_name, "VideoFrames")
+        return self._load_image_files(video_path)
 
     def get_magnitude(self, exp_name, index):
         """
@@ -220,6 +287,28 @@ class DataLoader:
                 if file.endswith(".npy"):
                     data.append(np.load(file_path))
         return np.concatenate(data) if data else np.array([])
+
+    def _load_image_files(self, directory):
+        """
+        Loads all .jpg and .jpeg video frames from a given directory into a NumPy array.
+        Frames are loaded in RGB format.
+
+        Args:
+            directory (str): Path to the folder containing video frames.
+
+        Returns:
+            np.ndarray: Array of video frames with shape (num_frames, height, width, 3) or empty array if none exist.
+        """
+        data = []
+        if os.path.exists(directory):
+            for file in sorted(os.listdir(directory)):
+                file_path = os.path.join(directory, file)
+                if file.endswith((".jpg", ".jpeg")):
+                    img = cv2.imread(file_path)  # Load in BGR format
+                    if img is not None:
+                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
+                        data.append(img)
+        return np.array(data) if data else np.array([])
 
     def _load_radar_maps(self, directory):
         """
@@ -293,6 +382,12 @@ class DataLoader:
     def get_phases2(self, exp_name=None):
         """Retrieves radar phases, either for a specific experiment or combined."""
         return self.data["phases2"].get(exp_name, np.array([])) if exp_name else self._get_combined_data(self.data["phases2"])
+
+    def get_video_frame(self, exp_name, index):
+        if exp_name in self.data["video_frames"]:
+            return self.data["video_frames"][exp_name].load_frame(index)
+        return None  # Retourne None si l'expérience n'existe pas
+       
 
 
 class DopplerDataset(Dataset):
@@ -695,3 +790,257 @@ def compare_multiple_learning_curves(
     os.makedirs(os.path.join(results_path, "_LearningCurves"), exist_ok=True)
     plt.savefig(os.path.join(results_path, "_LearningCurves", "comparison_multiple_learning_curves.pdf"))
     plt.close()
+
+
+def generate_prediction_video(exp_name, data_loader, results_path, save_path, output_fps=5, frame_skip=3):
+    import os
+    import numpy as np
+    import cv2
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+    gts = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_gts.npy"), allow_pickle=True)
+    preds = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_preds.npy"), allow_pickle=True)
+    frames_number = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_frames.npy"), allow_pickle=True)
+
+    assert len(gts) == len(preds) == len(frames_number), "Longueurs incompatibles"
+
+    sample_frame = data_loader.get_video_frame(exp_name, frames_number[0])
+    radar_map = data_loader.get_magnitude(exp_name, frames_number[0])
+
+    H, W, _ = sample_frame.shape
+    radar_size = H
+    graph_height = 3 * 200
+
+    combined_top_w = W + radar_size
+    output_size = (combined_top_w, H + graph_height)
+
+    out = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), output_fps, output_size)
+
+    for i in range(0, len(frames_number), frame_skip):
+        frame_idx = frames_number[i]
+
+        frame = data_loader.get_video_frame(exp_name, frame_idx)
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        t = 15
+        frame_bgr = cv2.copyMakeBorder(frame_bgr, t, t, t, t, cv2.BORDER_CONSTANT, value=(255, 0, 0))
+
+        radar_map = data_loader.get_magnitude(exp_name, frame_idx)
+        radar_map_resized = cv2.resize(radar_map, (radar_size, radar_size), interpolation=cv2.INTER_NEAREST)
+        radar_map_uint8 = cv2.normalize(radar_map_resized, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        radar_colored = cv2.applyColorMap(radar_map_uint8, cv2.COLORMAP_VIRIDIS)
+        radar_colored = cv2.copyMakeBorder(radar_colored, t, t, t, t, cv2.BORDER_CONSTANT, value=(0, 0, 255))
+
+        # === Curseurs texte ===
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1.0
+        color_red = (0, 0, 255)
+        color_blue = (255, 0, 0)
+        thickness = 2
+        y_offset = H - 20
+        x_offset = 50
+
+        cv2.putText(frame_bgr, f"YOLO prediction: {int(gts[i])}", (x_offset, y_offset), font, font_scale, color_blue, thickness)
+        cv2.putText(radar_colored, f"Radar-based model prediction: {round(preds[i], 1)}", (x_offset, y_offset), font, font_scale, color_red, thickness)
+
+        top_combined = np.hstack((frame_bgr, radar_colored))
+
+        fig, ax = plt.subplots(figsize=(combined_top_w / 100, graph_height / 100), dpi=100)
+        fig.subplots_adjust(left=0.05, right=0.98, top=0.92, bottom=0.15)
+        ax.plot(gts, label="YOLO (GT)", color="red")
+        ax.plot(preds, label="Prediction", color="blue")
+        ax.axvline(x=i, color="red", linestyle="-", linewidth=2)
+
+        total_duration = 60
+        total_frames = len(gts)
+        ax.set_xlim([0, total_frames - 1])
+        ax.set_ylim([0, max(max(preds), max(gts)) + 1])
+        ax.set_title("Estimation of the number of people in the scene")
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("People count")
+        ax.grid(True, linestyle='--', alpha=0.6)
+        ax.legend(loc="upper right", fontsize=16)
+
+        ticks = np.linspace(0, total_frames - 1, total_duration // 5 + 1, dtype=int)
+        labels = [str(i * 5) for i in range(len(ticks))]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(labels)
+
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+        plot_img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        plot_img = plot_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        plt.close(fig)
+
+        graph_width = top_combined.shape[1]
+        plot_img_resized = cv2.resize(plot_img, (graph_width, graph_height))
+        final_frame = np.vstack((top_combined, plot_img_resized)).astype(np.uint8)
+
+        if final_frame.shape[1] != output_size[0] or final_frame.shape[0] != output_size[1]:
+            final_frame = cv2.resize(final_frame, output_size)
+
+        out.write(final_frame)
+
+    out.release()
+    print(f"✅ Vidéo exportée : {save_path}")
+
+def createFolder(desiredPath): 
+    if not os.path.exists(desiredPath):
+        os.makedirs(desiredPath)
+
+def aggregate_by_second(time, values, fps=16, method="mean"):
+    seconds = np.floor(time).astype(int)
+    unique_sec = np.unique(seconds)
+    agg_values = []
+
+    for sec in unique_sec:
+        mask = (seconds == sec)
+        if method == "mean":
+            agg_values.append(values[mask].mean())
+
+    return unique_sec, np.array(agg_values)
+
+def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
+
+    #createFolder
+    createFolder(save_path)
+
+    for exp_name, data in results_by_experiment.items():
+        frames = np.array(data["frames"], dtype=int)
+        preds = np.array(data["preds"])
+        gts = np.array(data["gts"])
+
+        time = 60 * (frames - frames.min()) / (frames.max() - frames.min())
+        xticks = np.linspace(time.min(), time.max(), num=13)
+        ylim = (0, 25)
+        # 1️⃣ Raw prediction vs ground truth
+        plt.figure(figsize=(16, 5))
+        plt.plot(time, gts, label="YOLO (Ground Truth)", color='blue', alpha=0.7)
+        plt.plot(time, preds, label="Model Prediction", color='red', alpha=0.6)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Number of people")
+        plt.title(f"Experiment: {exp_name} — Raw Prediction vs Ground Truth")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.ylim(ylim)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_raw_pred_vs_gt.pdf")
+        plt.close()
+        mae_raw = mean_absolute_error(gts, preds)
+        print(f"[{exp_name}] MAE - Raw: {mae_raw:.2f}")
+
+
+        # 2️⃣ Aggregated (per second) prediction vs ground truth
+        sec, pred_avg = aggregate_by_second(time, preds, 1)
+        _, gt_avg = aggregate_by_second(time, gts, 1)
+
+        plt.figure(figsize=(16, 5))
+        plt.plot(sec, gt_avg, label="YOLO (GT) - avg/sec", linestyle='--', marker='o', color='blue')
+        plt.plot(sec, pred_avg, label="Model Prediction - avg/sec", linestyle='-', marker='x', color='red')
+        plt.xlabel("Time (s)")
+        plt.ylabel("Average People Count")
+        plt.title(f"Experiment: {exp_name} — Aggregated Prediction vs Ground Truth (per second)")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.ylim(ylim)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_agg_pred_vs_gt.pdf")
+        plt.close()
+        mae_agg = mean_absolute_error(gt_avg, pred_avg)
+        print(f"[{exp_name}] MAE - Aggregated: {mae_agg:.2f}")
+
+
+        # 3️⃣ Aggregated + Rounded prediction vs ground truth
+        pred_avg_rounded = np.maximum(np.round(pred_avg), 0)
+        gt_avg_rounded = np.maximum(np.round(gt_avg), 0)
+
+        plt.figure(figsize=(16, 5))
+        plt.plot(sec, gt_avg_rounded, label="YOLO (GT) - rounded", linestyle='--', marker='o', color='blue')
+        plt.plot(sec, pred_avg_rounded, label="Model Prediction - rounded", linestyle='-', marker='x', color='red')
+        plt.xlabel("Time (s)")
+        plt.ylabel("Rounded People Count")
+        plt.title(f"Experiment: {exp_name} — Rounded Aggregated Prediction vs Ground Truth")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.ylim(ylim)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_rounded_agg_pred_vs_gt.pdf")
+        plt.close()
+        mae_rounded = mean_absolute_error(gt_avg_rounded, pred_avg_rounded)
+        print(f"[{exp_name}] MAE - Rounded: {mae_rounded:.2f}")
+
+
+        # 4️⃣ Raw GT vs Aggregated Prediction + Std
+        from collections import defaultdict
+
+        # Regroupement des prédictions par seconde
+        preds_per_sec = defaultdict(list)
+        for t, p in zip(time, preds):
+            sec_t = int(t)
+            preds_per_sec[sec_t].append(p)
+
+        sec_sorted = sorted(preds_per_sec.keys())
+        pred_means = [np.mean(preds_per_sec[s]) for s in sec_sorted]
+        pred_stds = [np.std(preds_per_sec[s]) for s in sec_sorted]
+
+        plt.figure(figsize=(16, 5))
+        plt.plot(time, gts, label="YOLO (GT)", color='blue', alpha=0.7)
+        plt.plot(sec_sorted, pred_means, label="Model Prediction - avg/sec", color='red')
+        plt.fill_between(sec_sorted,
+                         np.array(pred_means) - np.array(pred_stds),
+                         np.array(pred_means) + np.array(pred_stds),
+                         color='red', alpha=0.2, label="Std Dev (Prediction)")
+        plt.xlabel("Time (s)")
+        plt.ylabel("People Count")
+        plt.title(f"Experiment: {exp_name} — GT (raw) vs Aggregated Prediction + Std")
+        plt.legend()
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.ylim(ylim)
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_rawGT_aggPred_std.pdf")
+        plt.close()
+        mae_rawGT_aggPred = mean_absolute_error(gts, np.interp(time, sec_sorted, pred_means))
+        print(f"[{exp_name}] MAE - Raw GT vs Aggregated Pred: {mae_rawGT_aggPred:.2f}")
+
+
+        # 5️⃣ Aggregated GT + Std vs Aggregated Prediction + Std
+        gts_per_sec = defaultdict(list)
+        for t, g in zip(time, gts):
+            sec_t = int(t)
+            gts_per_sec[sec_t].append(g)
+
+        gt_means = [np.mean(gts_per_sec[s]) for s in sec_sorted]
+        gt_stds = [np.std(gts_per_sec[s]) for s in sec_sorted]
+
+        plt.figure(figsize=(11, 3))
+        plt.plot(time, gts, label="YOLOv3 (GT)", color='blue')
+        #plt.fill_between(sec_sorted,
+        #                 np.array(gt_means) - np.array(gt_stds),
+        #                 np.array(gt_means) + np.array(gt_stds),
+        #                 color='blue', alpha=0.2)#, label="Std Dev (GT)")
+
+        plt.plot(sec_sorted, pred_means, label="Model Prediction", color='red')
+        plt.fill_between(sec_sorted,
+                         np.array(pred_means) - np.array(pred_stds),
+                         np.array(pred_means) + np.array(pred_stds),
+                         color='red', alpha=0.2)#, label="Std Dev (Prediction)")
+
+        plt.xlabel("Time (s)", fontsize=20)
+        plt.ylabel("People Count", fontsize=20)
+        #plt.title(f"Experiment: {exp_name} — Aggregated GT vs Aggregated Prediction + Std Dev")
+        # Thick legend
+        #plt.legend(fontsize=20, loc="lower right")
+        plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
+        plt.xticks(xticks)
+        plt.xlim((0, 60))
+        plt.ylim((0, 25))
+        plt.tight_layout()
+        plt.savefig(f"{save_path}/{exp_name}_aggGT_aggPred_std.pdf")
+        plt.close()
+        mae_aggGT_aggPred = mean_absolute_error(gt_means, pred_means)
+        print(f"[{exp_name}] MAE - Aggregated GT vs Aggregated Pred: {mae_aggGT_aggPred:.2f}")
+

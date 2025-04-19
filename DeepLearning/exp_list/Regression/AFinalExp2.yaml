@@ -1,6 +1,7 @@
 ---
 DATASET:
   FOLD_NUMBER: 0
+  FORCE_MAX_TO_0 : False
   USE_MEDIAN_LABELS : False
   CROPPED_RADAR_MAPS: False
 
