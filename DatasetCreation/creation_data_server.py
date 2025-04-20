@@ -21,7 +21,7 @@ args = parser.parse_args()
 n_exp = np.arange(args.fr, args.to)
 
 antenna_i = 0
-cropCenter = True
+cropCenter = False
 
 input_videos_filenames = [f"{video_data_path}/exp{i}.MOV" for i in n_exp]
 input_radar_raw_filenames  = [f"{radar_data_path}/exp{i}.npz" for i in n_exp]
@@ -49,10 +49,15 @@ for f, (input_video_filename, input_radar_raw_filename) in enumerate(zip(input_v
     #max_values = []
     #min_values = []
 
+
+    # I know it doesn't make sense but :
+    # RadarPhases -> contains difference of phases cropped
+    # RadarPhasesAntenna1 -> contains difference of phases not cropped
+
     for i in range(min(n_radar_maps, n_labels)):
         #save_radar_maps(radar_data['magnitudes'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/RadarMagnitudes")
         diff_of_phases = radar_data1['phases'][i] - radar_data0['phases'][i]
-        save_radar_maps(diff_of_phases, i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhases")
+        save_radar_maps(diff_of_phases, i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna1")
         #save_radar_maps(radar_data['magnitudes'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarMagnitudesCropped")
         #save_radar_maps(radar_data['phases'][i], i, labels_saved[i], f"{base_path}/{exp_names[f]}/RadarPhasesAntenna{antenna_i}")
         #save_video_frames(video_data['frames'][i], i, video_data['labels'][i], f"{base_path}/{exp_names[f]}/VideoFrames")

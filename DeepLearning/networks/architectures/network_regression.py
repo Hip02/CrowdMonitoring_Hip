@@ -176,20 +176,25 @@ class ResidualBlock(nn.Module):
         out += identity
         return self.relu(out)
 
+
 class DopplerResNetRegression(nn.Module):
     def __init__(self, param, layers, block=ResidualBlock):
         super(DopplerResNetRegression, self).__init__()
-        nb_input_frames = param["MODEL"].get("NB_PREV_FRAMES", 0) + 1
-        if param["DATASET"].get("ACTIVE_ANTENNA2", False):
-            nb_input_frames += 1
         
-        number_of_max = nb_input_frames
+        nb_frames = param["MODEL"].get("NB_PREV_FRAMES", 0) + 1
+        self.phase_mode = param["MODEL"].get("PHASE_MODE", "none")  # "none", "stack_all", "channel_pair", "dual_branch"
 
-        if param["DATASET"].get("ACTIVE_PHASE", False):
-            nb_input_frames += 1
-        
-        if param["DATASET"].get("ACTIVE_ANTENNA2", False) and param["DATASET"].get("ACTIVE_PHASE", False):
-            nb_input_frames += 1
+        # Définition du nombre de canaux d'entrée selon la stratégie
+        if self.phase_mode == "stack_all":
+            nb_input_channels = 2 * nb_frames
+        elif self.phase_mode == "channel_pair":
+            nb_input_channels = 2 * nb_frames
+        elif self.phase_mode == "dual_branch":
+            self.nb_input_rdm = nb_frames
+            self.nb_input_phase = nb_frames
+            nb_input_channels = None  # géré plus bas
+        else:
+            nb_input_channels = nb_frames  # uniquement RDM
 
         out_channels_conv1 = param["MODEL"]["NB_CHANNELS"]
         self.use_atrous_conv1 = param["MODEL"].get("USE_ATROUS_CONV1", False)
@@ -197,65 +202,88 @@ class DopplerResNetRegression(nn.Module):
         self.use_dilation = param["MODEL"].get("USE_DILATION", False)
         self.dilation = 2 if self.use_dilation else 1
 
-        # Conv1: standard + atrous (optionnel)
-        if self.use_atrous_conv1:
-            self.conv1_std = nn.Sequential(
-                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=7, stride=2, padding=3),
+        if self.phase_mode == "dual_branch":
+            # Deux branches parallèles
+            self.conv1_rdm = nn.Sequential(
+                nn.Conv2d(self.nb_input_rdm, out_channels_conv1, kernel_size=7, stride=2, padding=3),
                 nn.BatchNorm2d(out_channels_conv1),
                 nn.ReLU(inplace=True)
             )
-            self.conv1_dilated = nn.Sequential(
-                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=3, stride=2,
-                          padding=self.atrous_dilation_conv1, dilation=self.atrous_dilation_conv1),
+            self.conv1_phase = nn.Sequential(
+                nn.Conv2d(self.nb_input_phase, out_channels_conv1, kernel_size=7, stride=2, padding=3),
                 nn.BatchNorm2d(out_channels_conv1),
                 nn.ReLU(inplace=True)
             )
             conv1_out_channels = 2 * out_channels_conv1
         else:
-            self.conv1 = nn.Sequential(
-                nn.Conv2d(nb_input_frames, out_channels_conv1, kernel_size=7, stride=2, padding=3),
-                nn.BatchNorm2d(out_channels_conv1),
-                nn.ReLU(inplace=True)
-            )
-            conv1_out_channels = out_channels_conv1
+            # Une seule branche (tout empilé ou par paire canal)
+            if self.use_atrous_conv1:
+                self.conv1_std = nn.Sequential(
+                    nn.Conv2d(nb_input_channels, out_channels_conv1, kernel_size=7, stride=2, padding=3),
+                    nn.BatchNorm2d(out_channels_conv1),
+                    nn.ReLU(inplace=True)
+                )
+                self.conv1_dilated = nn.Sequential(
+                    nn.Conv2d(nb_input_channels, out_channels_conv1, kernel_size=3, stride=2,
+                              padding=self.atrous_dilation_conv1, dilation=self.atrous_dilation_conv1),
+                    nn.BatchNorm2d(out_channels_conv1),
+                    nn.ReLU(inplace=True)
+                )
+                conv1_out_channels = 2 * out_channels_conv1
+            else:
+                self.conv1 = nn.Sequential(
+                    nn.Conv2d(nb_input_channels, out_channels_conv1, kernel_size=7, stride=2, padding=3),
+                    nn.BatchNorm2d(out_channels_conv1),
+                    nn.ReLU(inplace=True)
+                )
+                conv1_out_channels = out_channels_conv1
 
         self.inplanes = conv1_out_channels
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        # Layers (avec dilation uniforme si activée)
         self.layer0 = self._make_layer(block, 64, layers[0], stride=1, dilation=self.dilation)
         self.layer1 = self._make_layer(block, 128, layers[1], stride=2, dilation=self.dilation)
         self.layer2 = self._make_layer(block, 256, layers[2], stride=2, dilation=self.dilation)
         self.layer3 = self._make_layer(block, 512, layers[3], stride=2, dilation=self.dilation)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 + number_of_max, 1)
+        self.fc = nn.Linear(512 + nb_frames, 1)
 
     def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
         downsample = None
         first_dilation = dilation if stride == 1 else 1
-
         if stride != 1 or self.inplanes != planes:
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes, kernel_size=1, stride=stride),
                 nn.BatchNorm2d(planes)
             )
-
         layers = [block(self.inplanes, planes, stride, downsample, dilation=first_dilation)]
         self.inplanes = planes
-
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, dilation=dilation))
-
         return nn.Sequential(*layers)
 
     def forward(self, x, max_doppler):
-        if self.use_atrous_conv1:
-            x_std = self.conv1_std(x)
-            x_dil = self.conv1_dilated(x)
-            x = torch.cat([x_std, x_dil], dim=1)
+        """
+        x : Tensor (B, C, H, W)
+            - Cas "stack_all" : C = 2 * (nb_frames), on empile RDMs + différences de phase
+            - Cas "channel_pair" : C = 2 * (nb_frames), on considère chaque frame comme (RDM, Phase) → empilé en entrée
+            - Cas "dual_branch" : C = nb_frames + nb_frames, on split à la main les RDMs et phases
+            - Cas "none" : C = nb_frames, uniquement les RDMs
+        max_doppler : Tensor (B,) ou (B, 1)
+        """
+        if self.phase_mode == "dual_branch":
+            x_rdm = x[:, :self.nb_input_rdm]
+            x_phase = x[:, self.nb_input_rdm:]
+            x_rdm = self.conv1_rdm(x_rdm)
+            x_phase = self.conv1_phase(x_phase)
+            x = torch.cat([x_rdm, x_phase], dim=1)
         else:
-            x = self.conv1(x)
+            if self.use_atrous_conv1:
+                x_std = self.conv1_std(x)
+                x_dil = self.conv1_dilated(x)
+                x = torch.cat([x_std, x_dil], dim=1)
+            else:
+                x = self.conv1(x)
 
         x = self.maxpool(x)
         x = self.layer0(x)

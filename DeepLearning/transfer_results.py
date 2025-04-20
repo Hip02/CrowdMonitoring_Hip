@@ -2,39 +2,44 @@ import os
 import subprocess
 
 # --- Configuration ---
-remote_user = "hhilgers"  # <-- À remplacer
-remote_host = "betelgeuse"  # <-- À remplacer (ex: 192.168.1.25)
+remote_user = "hhilgers"  # <-- Modifier si besoin
+remote_host = "betelgeuse"  # <-- Modifier si besoin
 remote_base_path = "/linux/hhilgers/Code/CrowdMonitoring_Hip/DeepLearning/results/"
-local_destinations = os.path.expanduser("/Users/hippolytehilgers/Desktop/UCL_Hip/Mémoire/Code/DeepLearning/results/Regression")
-# ---------------------
+local_base_path = os.path.expanduser(
+    "~/Desktop/UCL_Hip/Mémoire/Code/DeepLearning/results/Regression"
+)
+folder_name = "AFinalExp"  # Nom de la sous-expérience
 
-# --- Entrée utilisateur : nom du sous-dossier à transférer ---
-folder_name = "BackToResNet"
-_range = range(1, 9)
-local_destinations = os.path.join(local_destinations, folder_name)
-local_destinations = [f"{local_destinations}4" for i in _range]
+# --- Plages à transférer ---
+exp_range = range(1, 3)     # Expériences 0 à 2
+fold_range = range(1, 9)    # Folds 1 à 8
 
-# On Betelgeuse
-subfolders = [f"Regression/{folder_name}4/fold{i}" for i in _range]
+# --- Transfert ---
+for exp_id in exp_range:
+    for fold_id in fold_range:
+        # Construction des chemins
+        remote_path = os.path.join(
+            remote_base_path, f"Regression/{folder_name}{exp_id}/fold{fold_id}"
+        )
+        local_path = os.path.join(
+            local_base_path, f"{folder_name}{exp_id}", f"fold{fold_id}"
+        )
 
-for local_dest, subfolder in zip(local_destinations, subfolders):
-    # --- Construction des chemins distants et locaux ---
-    os.makedirs(local_dest, exist_ok=True)
-    remote_path = os.path.join(remote_base_path, subfolder)
+        # Création du dossier local si nécessaire
+        os.makedirs(local_path, exist_ok=True)
 
-    # --- Construction de la commande SCP ---
-    scp_command = [
-        "scp",
-        "-r",  # option récursive
-        f"{remote_user}@{remote_host}:{remote_path}",
-        local_dest
-    ]
+        # Commande SCP
+        scp_command = [
+            "scp", "-r",
+            f"{remote_user}@{remote_host}:{remote_path}",
+            local_path
+        ]
 
-    # --- Affichage et exécution de la commande ---
-    print(f"\nTransfert de {remote_path} vers {local_dest}...\n")
-    try:
-        subprocess.run(scp_command, check=True)
-        print("\n✅ Transfert terminé avec succès.")
-    except subprocess.CalledProcessError as e:
-        print("\n❌ Une erreur est survenue pendant le transfert.")
-        print("Détail de l'erreur :", e)
+        # Affichage et exécution
+        print(f"\n🔄 Transfert de {remote_path} vers {local_path}...\n")
+        try:
+            subprocess.run(scp_command, check=True)
+            print("✅ Transfert terminé avec succès.\n")
+        except subprocess.CalledProcessError as e:
+            print("❌ Erreur lors du transfert.")
+            print("Détail :", e)

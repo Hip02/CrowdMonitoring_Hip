@@ -193,10 +193,12 @@ class DataLoader:
 
             if self.cropped_radar_maps:
                 magnitudes_to_load = "RadarMagnitudesCropped"
+                # Better name would make more sense (RadarPhasesCropped)
                 phases_to_load = "RadarPhases"
             else:
                 magnitudes_to_load = "RadarMagnitudes"
-                phases_to_load = "RadarPhases_NOT_AVAILABLE"
+                # Better name would make more sense (RadarPhases)
+                phases_to_load = "RadarPhasesAntenna1"
 
             # Utilisation du proxy pour le chargement différé des images
             self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=False)
@@ -404,10 +406,9 @@ class DopplerDataset(Dataset):
         self.standardize_labels = param["DATASET"].get("STANDARDIZE_LABELS", True)
         self.use_median_labels = param["DATASET"].get("USE_MEDIAN_LABELS", False)
 
-        self.activeAntenna2 = param["DATASET"].get("ACTIVE_ANTENNA2", False)
-        self.activePhase = param["DATASET"].get("ACTIVE_PHASE", False)
+        self.phase_mode = param["DATASET"].get("PHASE_MODE", "none")
 
-        self.fold_number = param["DATASET"].get("FOLD_NUMBER", 1)
+        self.fold_number = param["DATASET"].get("FOLD_NUMBER", 0)
 
         # Set numpy random seed for reproducibility
         np.random.seed(random_seed)
@@ -454,7 +455,7 @@ class DopplerDataset(Dataset):
             print(colored("="*60, "blue"))
 
             print(colored("→ Active Antenna 2", "cyan") + "         : " + colored(str(self.activeAntenna2), "green" if self.activeAntenna2 else "red"))
-            print(colored("→ Active Phase", "cyan") + "             : " + colored(str(self.activePhase), "green" if self.activePhase else "red"))
+            print(colored("→ Phase Mode", "cyan") + "             : " + colored(str(self.phase_mode), "green") if self.phase_mode != "none" else colored("none", "red"))
             print(colored("→ Use previous frames", "cyan") + "      : " + colored(str(self.use_prev_frames), "green" if self.use_prev_frames else "red"))
             if self.use_prev_frames:
                 print(colored("→ Number of previous frames", "cyan") + ": " + colored(f"{self.nb_prev_frames}", "yellow"))
@@ -575,45 +576,59 @@ class DopplerDataset(Dataset):
         return len(self.data_indices)
 
     def __getitem__(self, idx):
+        """
+        Retourne : img_tensor (C, H, W), max_tensor (nb_frames,), label_tensor (float)
+        
+        phase_mode détermine l'organisation des canaux :
+        - "none"         : uniquement les RDMs
+        - "stack_all"    : tous les RDMs suivis de toutes les ΔΦ
+        - "channel_pair" : [RDM, ΔΦ, RDM, ΔΦ, ...]
+        - "dual_branch"  : mêmes que stack_all mais à séparer dans le modèle
+        """
         exp_name, image_index = self.data_indices[idx]
         image_index = int(image_index)
 
-        img_stack = []
+        rdm_stack = []
+        phase_stack = []
         max_stack = []
-
         labels = []
 
+        # Définir les indices temporels
         if self.use_prev_frames:
             indices = range(image_index - self.nb_prev_frames * self.time_steps, image_index + 1, self.time_steps)
         else:
             indices = [image_index]
 
         for i in indices:
-            img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="magnitude"))
+            rdm_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="magnitude"))
             max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=1))
             labels.append(self._load_label(exp_name, i))
 
-            if self.activePhase:
-                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="phase"))
+            if self.phase_mode in ["stack_all", "dual_branch"]:
+                phase_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=1, type="phase"))
 
-            if self.activeAntenna2:
-                img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2, type="magnitude"))
-                max_stack.append(self._get_normalized_max_value(exp_name, i, antenna=2))
+            elif self.phase_mode == "channel_pair":
+                phase_img = self._load_and_preprocess_image(exp_name, i, antenna=1, type="phase")
+                rdm_stack.append(phase_img)  # Intercalé avec le RDM
 
-                if self.activePhase:
-                    img_stack.append(self._load_and_preprocess_image(exp_name, i, antenna=2, type="phase"))
+        # Stack final des données
+        if self.phase_mode == "dual_branch":
+            rdm_tensor = torch.tensor(np.stack(rdm_stack, axis=0), dtype=torch.float32)
+            phase_tensor = torch.tensor(np.stack(phase_stack, axis=0), dtype=torch.float32)
+            img_tensor = torch.cat([rdm_tensor, phase_tensor], dim=0)
 
-        if self.use_prev_frames or self.activeAntenna2 or self.activePhase:
-            img_tensor = torch.tensor(np.stack(img_stack, axis=0), dtype=torch.float32)  # (T or 2T, H, W)
+        elif self.phase_mode == "stack_all":
+            full_stack = rdm_stack + phase_stack  # RDMs puis phases
+            img_tensor = torch.tensor(np.stack(full_stack, axis=0), dtype=torch.float32)
+
         else:
-            img_tensor = torch.tensor(np.array(img_stack))
+            img_tensor = torch.tensor(np.stack(rdm_stack, axis=0), dtype=torch.float32)
 
         if self.force_max_to_0:
             max_stack = [0] * len(max_stack)
 
         max_tensor = torch.tensor(max_stack, dtype=torch.float32)
 
-        # Compute median of labels
         if self.use_median_labels:
             label_median = np.median(labels)
             label_tensor = torch.tensor(label_median, dtype=torch.float32)
@@ -621,6 +636,7 @@ class DopplerDataset(Dataset):
             label_tensor = torch.tensor(labels[-1], dtype=torch.float32)
 
         return img_tensor, max_tensor, label_tensor
+
 
     def get_exp_and_frame(self, idx):
         """
