@@ -8,6 +8,7 @@ DATASET:
 MODEL:
   NB_CHANNELS: 64
   USE_PREV_FRAMES: False
+  PHASE_MODE : stack_all
 
 TRAINING: 
   PREDICTION_TYPE: regression

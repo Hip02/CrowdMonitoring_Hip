@@ -406,7 +406,7 @@ class DopplerDataset(Dataset):
         self.standardize_labels = param["DATASET"].get("STANDARDIZE_LABELS", True)
         self.use_median_labels = param["DATASET"].get("USE_MEDIAN_LABELS", False)
 
-        self.phase_mode = param["DATASET"].get("PHASE_MODE", "none")
+        self.phase_mode = param["MODEL"].get("PHASE_MODE", "none")
 
         self.fold_number = param["DATASET"].get("FOLD_NUMBER", 0)
 
