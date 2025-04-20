@@ -454,7 +454,6 @@ class DopplerDataset(Dataset):
             print(colored("             DOPPLER DATASET INITIALIZATION SUMMARY", "green", attrs=["bold"]))
             print(colored("="*60, "blue"))
 
-            print(colored("→ Active Antenna 2", "cyan") + "         : " + colored(str(self.activeAntenna2), "green" if self.activeAntenna2 else "red"))
             print(colored("→ Phase Mode", "cyan") + "             : " + colored(str(self.phase_mode), "green") if self.phase_mode != "none" else colored("none", "red"))
             print(colored("→ Use previous frames", "cyan") + "      : " + colored(str(self.use_prev_frames), "green" if self.use_prev_frames else "red"))
             if self.use_prev_frames:

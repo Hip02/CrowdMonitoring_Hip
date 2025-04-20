@@ -13,7 +13,7 @@ video_data_path = os.path.join(source_data_path, "Video")
 
 parser = argparse.ArgumentParser(description="Process radar and video files")
 # from and to arguments
-parser.add_argument("-f", "--fr", type=int, default=0)
+parser.add_argument("-f", "--fr", type=int, default=1)
 parser.add_argument("-t", "--to", type=int, default=51)
 args = parser.parse_args()
 
