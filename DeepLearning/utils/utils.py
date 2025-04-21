@@ -193,12 +193,10 @@ class DataLoader:
 
             if self.cropped_radar_maps:
                 magnitudes_to_load = "RadarMagnitudesCropped"
-                # Better name would make more sense (RadarPhasesCropped)
-                phases_to_load = "RadarPhases"
+                phases_to_load = "DiffPhasesCropped"
             else:
                 magnitudes_to_load = "RadarMagnitudes"
-                # Better name would make more sense (RadarPhases)
-                phases_to_load = "RadarPhasesAntenna1"
+                phases_to_load = "DiffPhases"
 
             # Utilisation du proxy pour le chargement différé des images
             self.data["magnitudes"][exp] = LazyImageLoader(os.path.join(self.base_path, exp, magnitudes_to_load), not_lazy=False)
