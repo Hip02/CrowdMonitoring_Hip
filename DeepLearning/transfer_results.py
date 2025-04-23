@@ -11,7 +11,7 @@ local_base_path = os.path.expanduser(
 folder_name = "AFinalExp"  # Nom de la sous-expérience
 
 # --- Plages à transférer ---
-exp_range = range(3, 5)
+exp_range = [2, 5, 6]
 fold_range = range(1, 9)    # Folds 1 à 8
 
 # --- Transfert ---
@@ -31,7 +31,7 @@ for exp_id in exp_range:
         # Commande SCP
         scp_command = [
             "scp", "-r",
-            f"{remote_user}@{remote_host}:{remote_path}",
+            f"{remote_user}@{remote_host}:{remote_path}/",
             local_path
         ]
 
