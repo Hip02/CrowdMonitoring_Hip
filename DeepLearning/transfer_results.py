@@ -11,7 +11,7 @@ local_base_path = os.path.expanduser(
 folder_name = "AFinalExp"  # Nom de la sous-expérience
 
 # --- Plages à transférer ---
-exp_range = range(1, 3)     # Expériences 0 à 2
+exp_range = range(3, 5)
 fold_range = range(1, 9)    # Folds 1 à 8
 
 # --- Transfert ---

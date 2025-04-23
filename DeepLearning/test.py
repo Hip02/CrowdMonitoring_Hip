@@ -3,59 +3,55 @@ import os
 import sys
 import yaml
 import numpy as np
-from utils.utils import DataLoader
-from networks.model import Network_Class
-
 from utils.utils import DataLoader, plot_learning_curves
 from networks.model import Network_Class
-import numpy as np
-import yaml
-import os
 
 # Argument parser
-parser = argparse.ArgumentParser(description="Run experiment by index from l_exp list")
-parser.add_argument("-exp", "--exp_index", type=int, default=0, help="Index of the experiment to run (in l_exp list, default=0)")
+parser = argparse.ArgumentParser(description="Run one or more experiments from the l_exp list")
+parser.add_argument("-exp", "--exp_indices", type=int, nargs='+', required=True,
+                    help="Indices of experiments to run (in l_exp list)")
 parser.add_argument("-fold", "--fold", type=int, default=1, help="Fold number to run (default=1)")
 args = parser.parse_args()
 
 # Load Data
 base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
-
 l_exp = [f"Regression/AFinalExp{i}" for i in range(0, 40)]
-
-# Get experiment path from index
-try:
-    exp = l_exp[args.exp_index]
-except IndexError:
-    print(f"❌ Invalid index {args.exp_index}. Please choose a value between 0 and {len(l_exp) - 1}.")
-    sys.exit(1)
 
 fold = args.fold
 
-print(f"🔔 Starting {exp} fold {fold}")
+for exp_index in args.exp_indices:
+    try:
+        exp = l_exp[exp_index]
+    except IndexError:
+        print(f"❌ Invalid index {exp_index}. Please choose a value between 0 and {len(l_exp) - 1}.")
+        continue
 
-# Load experiment parameters from YAML
-yaml_path = os.path.join("exp_list", f"{exp}.yaml")
-if not os.path.isfile(yaml_path):
-    print(f"❌ YAML file not found at {yaml_path}")
-    sys.exit(1)
+    print(f"🔔 Starting {exp} fold {fold}")
 
-with open(yaml_path, 'r') as stream:
-    param = yaml.safe_load(stream)
+    # Load experiment parameters from YAML
+    yaml_path = os.path.join("exp_list", f"{exp}.yaml")
+    if not os.path.isfile(yaml_path):
+        print(f"❌ YAML file not found at {yaml_path}")
+        continue
 
-param["DATASET"]["FOLD_NUMBER"] = fold
+    with open(yaml_path, 'r') as stream:
+        param = yaml.safe_load(stream)
 
-resultsPath = os.path.join("results", exp, f"fold{fold}")
-os.makedirs(resultsPath, exist_ok=True)
+    param["DATASET"]["FOLD_NUMBER"] = fold
 
-data_loader = DataLoader(base_path, param, exp_list=all)
-myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
+    resultsPath = os.path.join("results", exp, f"fold{fold}")
+    os.makedirs(resultsPath, exist_ok=True)
 
-myNetwork.loadWeight()
-myNetwork.test()
+    data_loader = DataLoader(base_path, param, exp_list=all)
+    myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
-train_losses = np.load(os.path.join(resultsPath, "train_losses.npy"))
-val_losses = np.load(os.path.join(resultsPath, "val_losses.npy"))
+    myNetwork.loadWeight()
+    myNetwork.test()
 
-plot_learning_curves(train_losses, val_losses, resultsPath)
+    train_losses = np.load(os.path.join(resultsPath, "train_losses.npy"))
+    val_losses = np.load(os.path.join(resultsPath, "val_losses.npy"))
+
+    plot_learning_curves(train_losses, val_losses, resultsPath)
+
+print("✅ All experiments completed.")
