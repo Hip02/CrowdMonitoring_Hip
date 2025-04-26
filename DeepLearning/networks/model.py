@@ -264,8 +264,13 @@ class Network_Class:
         print(colored("="*60, "blue") + "\n")
 
 
-    def loadWeight(self):
-        self.model.load_state_dict(torch.load(self.resultsPath + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
+    def loadWeight(self, modelPath=None):
+        if modelPath is None:
+            model_to_load = self.resultsPath
+        else:
+            model_to_load = modelPath
+        print(self.resultsPath)
+        self.model.load_state_dict(torch.load(model_to_load + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
     def train(self):
         best_loss = np.Inf

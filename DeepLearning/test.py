@@ -11,6 +11,8 @@ parser = argparse.ArgumentParser(description="Run one or more experiments from t
 parser.add_argument("-exp", "--exp_indices", type=int, nargs='+', required=True,
                     help="Indices of experiments to run (in l_exp list)")
 parser.add_argument("-fold", "--fold", type=int, default=1, help="Fold number to run (default=1)")
+parser.add_argument("-model", "--model", type=str, default=None,
+                    help="Optional model name or path to load weights into (default=None)")
 args = parser.parse_args()
 
 # Load Data
@@ -46,7 +48,7 @@ for exp_index in args.exp_indices:
     data_loader = DataLoader(base_path, param, exp_list=all)
     myNetwork = Network_Class(data_loader, param, resultsPath, sub_sample_factor=1)
 
-    myNetwork.loadWeight()
+    myNetwork.loadWeight(modelPath=args.model)
     myNetwork.test()
 
     train_losses = np.load(os.path.join(resultsPath, "train_losses.npy"))
