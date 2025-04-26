@@ -17,7 +17,11 @@ args = parser.parse_args()
 
 # Load Data
 base_path = "/home/hhilgers/Dataset"
-all = [f"NewExp{i}" for i in range(1, 51)]
+if args.fold == 9 :
+    all = [f"NewExp{i}" for i in range(1, 81)]
+else:
+    all = [f"NewExp{i}" for i in range(1, 51)]
+
 l_exp = [f"Regression/AFinalExp{i}" for i in range(0, 40)]
 
 fold = args.fold
