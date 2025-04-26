@@ -269,7 +269,6 @@ class Network_Class:
             model_to_load = self.resultsPath
         else:
             model_to_load = modelPath
-        print(self.resultsPath)
         self.model.load_state_dict(torch.load(model_to_load + '/_Weights/wghts.pkl', map_location=torch.device(self.device)))
 
     def train(self):
