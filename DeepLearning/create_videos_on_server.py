@@ -18,7 +18,7 @@ param["DATASET"]["FOLD_NUMBER"] = fold
 
 to_load = ["max_values", "labels", "magnitudes", "video_frames"]
 
-data_loader = DataLoader(base_path, param, exp_list=all, to_load=to_load)
+data_loader = DataLoader(base_path, param, exp_list=exp_list, to_load=to_load)
 
 resultsPath = os.path.join("results", exp, f"fold{fold}")
 
