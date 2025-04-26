@@ -19,7 +19,6 @@ plot_label_distribution(labels, filename="test_labels_distribution.pdf")
 
 
 ## SECOND GRAPH
-
 # Paramètres
 groups_size = 1000
 num_experiments = 30  # 10x5 grid
@@ -40,14 +39,13 @@ for i in range(num_experiments):
 # Tri par moyenne de personnes (ordre croissant)
 sorted_groups = sorted(group_means, key=lambda x: x[1])
 
-# Normalisation pour la colormap
+# Normalisation pour la colormap (fixée à max 20.194)
 all_means_sorted = [mean for (_, mean) in sorted_groups]
-norm = colors.Normalize(vmin=min(all_means_sorted), vmax=max(all_means_sorted))
+norm = colors.Normalize(vmin=min(all_means_sorted), vmax=20.194)
 cmap = cm.inferno
 scalar_map = cm.ScalarMappable(norm=norm, cmap=cmap)
 
 # Définition des 5 catégories (très faible à très forte densité)
-# Seuils arbitraires (à ajuster si besoin en fonction du dataset)
 thresholds = [2, 4, 8, 15]
 
 def get_density_category(mean_val):
@@ -75,9 +73,8 @@ border_colors = {
 fig, axs = plt.subplots(n_rows, n_cols, figsize=(24, 8), sharex=True, sharey=True)
 axs = axs.flatten()
 
-# Échelle Y uniforme
-ymin = np.min(labels)
-ymax = np.max(labels)
+# Échelle Y uniforme (fixée à 0-26)
+ymin, ymax = 0, 26
 
 # Dictionnaire pour imprimer les groupes à la fin
 category_indices = {"Very Low": [], "Low": [], "Medium": [], "High": [], "Very High": []}
@@ -117,7 +114,7 @@ cbar_ax = fig.add_axes([0.92, 0.25, 0.015, 0.5])
 cbar = fig.colorbar(scalar_map, cax=cbar_ax)
 cbar.set_label('Mean number of people', fontsize=12)
 
-# Légende des catégories (5 couleurs)
+# Légende des catégories
 from matplotlib.patches import Patch
 legend_elements = [
     Patch(facecolor='white', edgecolor=border_colors["Very Low"], label=f'Very Low (µ ≤ {thresholds[0]})', linewidth=2.5),
