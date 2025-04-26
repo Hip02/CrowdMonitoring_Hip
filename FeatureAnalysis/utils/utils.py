@@ -1135,7 +1135,7 @@ def plot_pair_feature_space(feature1, feature2, labels, feature1_name="Feature 1
 
     plt.show()
 
-def plot_label_distribution(labels, title="Number of people distribution"):
+def plot_label_distribution(labels, filename="label_distribution.pdf", title="Number of people distribution"):
     """
     Plots a histogram showing the distribution of labels.
 
@@ -1158,7 +1158,7 @@ def plot_label_distribution(labels, title="Number of people distribution"):
 
     plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    plt.savefig("label_distribution.pdf")
+    plt.savefig(filename)
 
 def define_models():
     """Définit les modèles de classification."""
