@@ -55,9 +55,9 @@ for exp_index in args.exp_indices:
     myNetwork.loadWeight(modelPath=args.model)
     myNetwork.test()
 
-    train_losses = np.load(os.path.join(resultsPath, "train_losses.npy"))
-    val_losses = np.load(os.path.join(resultsPath, "val_losses.npy"))
+    #train_losses = np.load(os.path.join(resultsPath, "train_losses.npy"))
+    #val_losses = np.load(os.path.join(resultsPath, "val_losses.npy"))
 
-    plot_learning_curves(train_losses, val_losses, resultsPath)
+    #plot_learning_curves(train_losses, val_losses, resultsPath)
 
 print("✅ All experiments completed.")
