@@ -7,8 +7,17 @@ import yaml
 import cv2
 import os
 
+# Add from to parse arguments
+import argparse
+parser = argparse.ArgumentParser(description="Generate prediction videos for a range of experiments")
+parser.add_argument("-f", "--fr", type=int, default=51, help="Starting experiment number (default=51)")
+parser.add_argument("-t", "--to", type=int, default=81, help="Ending experiment number (default=81)")
+args = parser.parse_args()
+
+
+
 base_path = "/home/hhilgers/Dataset"
-exp_list = [f"NewExp{i}" for i in range(51, 81)]
+exp_list = [f"NewExp{i}" for i in range(args.fr, args.to)]
 exp = "Regression/AFinalExp7"
 fold = 9
 
