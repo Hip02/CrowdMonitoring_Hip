@@ -31,7 +31,7 @@ data_loader = DataLoader(base_path, param, exp_list=exp_list, to_load=to_load)
 
 resultsPath = os.path.join("results", exp, f"fold{fold}")
 
-for exp_n in range(51, 81):
+for exp_n in range(args.fr, args.to):
 
     exp_name = f"NewExp{exp_n}"
 
