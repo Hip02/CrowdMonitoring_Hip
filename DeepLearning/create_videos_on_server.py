@@ -8,7 +8,7 @@ import cv2
 import os
 
 base_path = "/home/hhilgers/Dataset"
-exp_list = [f"NewExp{i}" for i in range(75, 81)]
+exp_list = [f"NewExp{i}" for i in range(74, 81)]
 exp = "Regression/AFinalExp7"
 fold = 9
 
