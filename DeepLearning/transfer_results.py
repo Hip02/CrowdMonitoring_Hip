@@ -11,11 +11,11 @@ local_base_path = os.path.expanduser(
 folder_name = "AFinalExp"  # Nom de la sous-expérience
 
 # 1-time scp command
-# scp -r hhilgers@betelgeuse:/linux/hhilgers/Code/CrowdMonitoring_Hip/DeepLearning/results/Regression/AFinalExp2/fold1 ~/Desktop/UCL_Hip/Mémoire/Code/DeepLearning/results/Regression/AFinalExp2/fold1
+# scp -r hhilgers@betelgeuse:/linux/hhilgers/Code/CrowdMonitoring_Hip/DeepLearning/results/Regression/AFinalExp2/fold1 ~/Downloads
 
 # --- Plages à transférer ---
-exp_range = [7]
-fold_range = range(9, 10)    # Folds 1 à 8
+exp_range = [8, 9]
+fold_range = range(1, 9)    # Folds 1 à 8
 
 # --- Transfert ---
 for exp_id in exp_range:
