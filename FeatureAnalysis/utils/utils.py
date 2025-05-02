@@ -979,6 +979,58 @@ def plot_feature_per_label(labels, feature_values, feature_name="Feature", color
 
     plt.show()
 
+def plot_feature_per_labels_grid(
+    labels,
+    feature_values_list,
+    feature_names=None,
+    colors=None
+):
+    """
+    Affiche une grille 3x4 de scatter plots avec des features différentes mais un même vecteur de labels.
+
+    Args:
+        labels (numpy.ndarray): Vecteur de labels commun (taille N).
+        feature_values_list (list of numpy.ndarray): Liste de 12 vecteurs (N,) avec les valeurs des features.
+        feature_names (list of str, optional): Noms des features à afficher dans chaque subplot (longueur 12).
+        colors (list of str, optional): Couleurs pour chaque subplot (longueur 12).
+
+    Returns:
+        None
+    """
+    assert len(feature_values_list) == 12, "Il faut exactement 12 vecteurs de valeurs"
+    if feature_names is not None:
+        assert len(feature_names) == 12, "feature_names doit contenir 12 éléments"
+    if colors is not None:
+        assert len(colors) == 12, "colors doit contenir 12 éléments"
+
+    labels = np.array(labels)
+    fig, axes = plt.subplots(3, 4, figsize=(26, 14))
+    axes = axes.flatten()
+
+    for i, feature_values in enumerate(feature_values_list):
+        ax = axes[i]
+        feature_values = np.array(feature_values)
+        color = colors[i] if colors else 'blue'
+        name = feature_names[i] if feature_names else f'Feature {i+1}'
+
+        # Points individuels
+        ax.scatter(labels, feature_values, color=color, alpha=0.01)
+
+        # Moyennes par label
+        unique_labels, counts = np.unique(labels, return_counts=True)
+        mean_values = np.bincount(labels, weights=feature_values) / counts
+
+        # Affichage des moyennes
+        ax.scatter(unique_labels, mean_values, color='red', label='Mean', s=60, edgecolor='black')
+
+        ax.set_title(name)
+        ax.set_xticks(unique_labels)
+        ax.set_xticklabels(unique_labels, rotation=45)
+        ax.set_ylabel(name)
+
+    #fig.suptitle('Feature values per label (12 subsets)', fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig("feature_per_labels_grid.png")
 
 
 def plot_correlation_matrix(features, labels, feature_names, colors, label_name="Label"):
@@ -1021,7 +1073,8 @@ def plot_correlation_matrix(features, labels, feature_names, colors, label_name=
 
     # Add title and labels
     plt.title("Correlation Matrix of Features and Labels")
-    plt.show()
+    plt.tight_layout()
+    plt.savefig("features_correlation_matrix.pdf")
 
 
 def normalized_mutual_info(X, Y):
@@ -1504,7 +1557,7 @@ def train_on_custom_folds(model, data_loader, feature_names, folds_path="folds_c
     mse_list = []
 
     for fold_idx, (fold_name, fold_data) in enumerate(folds_config["FOLDS"].items()):
-        print(f"\n📂 Fold {fold_idx + 1} — {fold_name}")
+        #print(f"\n📂 Fold {fold_idx + 1} — {fold_name}")
 
         # Construction des noms d'expériences (NewExp1, NewExp2, etc.)
         train_expnames = [f"NewExp{idx}" for idx in fold_data["TRAIN"]]
