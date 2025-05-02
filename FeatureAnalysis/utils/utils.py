@@ -1614,7 +1614,7 @@ def train_on_custom_folds(model, data_loader, feature_names, folds_path="folds_c
     plt.yticks(np.arange(0, np.max(all_y_test) + 1))
     plt.grid(True)
     plt.legend()
-    plt.show()
+    plt.savefig("predictions_across_folds.pdf")
 
     mean_mse = np.mean(mse_list)
     print(f"\n🔢 MSE moyenne sur tous les folds: {mean_mse:.2f}")
