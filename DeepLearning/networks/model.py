@@ -609,6 +609,70 @@ class Network_Class:
 
         return accuracy
     
+
+    def analyze_gradcam(self, save_path="gradcam_output", layer_name="layer3"):
+        createFolder(save_path)
+        self.model.eval()
+        # Récupérer un seul batch
+        for image_magnitude, max_doppler, labels in self.trainDataLoader:
+            image_magnitude = image_magnitude.to(self.device)
+            max_doppler = max_doppler.to(self.device)
+            labels = labels.view(-1, 1).to(self.device)
+            break  # un seul batch
+
+        image_magnitude.requires_grad = True
+
+        # Hook pour récupérer les activations et gradients
+        activations = []
+        gradients = []
+
+        def forward_hook(module, input, output):
+            activations.append(output)
+
+        def backward_hook(module, grad_in, grad_out):
+            gradients.append(grad_out[0])
+
+        # Enregistre les hooks
+        target_layer = getattr(self.model, layer_name)
+        handle_fw = target_layer.register_forward_hook(forward_hook)
+        handle_bw = target_layer.register_backward_hook(backward_hook)
+
+        # Forward + backward
+        outputs = self.model(image_magnitude, max_doppler)
+        loss = outputs.sum()
+        self.model.zero_grad()
+        loss.backward()
+
+        # Nettoyage
+        handle_fw.remove()
+        handle_bw.remove()
+
+        # Traitement Grad-CAM
+        act = activations[0].detach()  # (B, C, H, W)
+        grad = gradients[0].detach()   # (B, C, H, W)
+        weights = grad.mean(dim=(2, 3), keepdim=True)  # (B, C, 1, 1)
+        cam = (weights * act).sum(dim=1)               # (B, H, W)
+        cam = F.relu(cam)
+        cam = F.interpolate(cam.unsqueeze(1), size=image_magnitude.shape[2:], mode='bilinear', align_corners=False)
+        cam = cam.squeeze().cpu().numpy()              # (B, H, W)
+
+        # Traitement des entrées
+        inputs = image_magnitude.detach().cpu().numpy()  # (B, C, H, W)
+
+        # Sauvegarde des heatmaps superposées
+        for i in range(inputs.shape[0]):
+            for c in range(inputs.shape[1]):
+                base_img = inputs[i, c]
+                heatmap = cam[i]
+                plt.figure(figsize=(4, 4))
+                plt.imshow(base_img, cmap='gray', alpha=0.5)
+                plt.imshow(heatmap, cmap='inferno', alpha=0.5)
+                plt.axis('off')
+                filename = f"{save_path}/sample{i}_input{c}.png"
+                plt.savefig(filename, bbox_inches='tight', pad_inches=0)
+                plt.close()
+                print(f"Grad-CAM heatmap saved at {filename}")
+
     def visualize_batch(self, num_images=4):
         """
         Affiche un batch d'images Doppler avec leurs labels et valeurs max Doppler.

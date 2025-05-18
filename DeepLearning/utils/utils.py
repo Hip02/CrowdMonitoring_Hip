@@ -719,17 +719,17 @@ def plot_multiple_learning_curves(all_train_losses, all_val_losses, results_path
         results_path (str): Directory path to save the plot.
         title (str): Title of the plot.
     """
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(16, 4))
 
     # Convert to numpy arrays
     all_train_losses = np.array(all_train_losses)
     all_val_losses = np.array(all_val_losses)
 
     # Plot individual curves
-    for train_curve in all_train_losses:
-        plt.plot(train_curve, color='blue', alpha=0.3)
-    for val_curve in all_val_losses:
-        plt.plot(val_curve, color='red', alpha=0.3)
+    #for train_curve in all_train_losses:
+    #    plt.plot(train_curve, color='blue', alpha=0.3)
+    #for val_curve in all_val_losses:
+    #    plt.plot(val_curve, color='red', alpha=0.3)
 
     # Plot average curves
     mean_train = np.mean(all_train_losses, axis=0)

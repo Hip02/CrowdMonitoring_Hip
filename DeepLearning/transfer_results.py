@@ -14,7 +14,7 @@ folder_name = "AFinalExp"  # Nom de la sous-expérience
 # scp -r hhilgers@betelgeuse:/linux/hhilgers/Code/CrowdMonitoring_Hip/DeepLearning/results/Regression/AFinalExp2/fold1 ~/Downloads
 
 # --- Plages à transférer ---
-exp_range = [8, 9]
+exp_range = [17]
 fold_range = range(1, 9)    # Folds 1 à 8
 
 # --- Transfert ---
