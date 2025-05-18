@@ -635,7 +635,7 @@ class Network_Class:
         # Enregistre les hooks
         target_layer = getattr(self.model, layer_name)
         handle_fw = target_layer.register_forward_hook(forward_hook)
-        handle_bw = target_layer.register_backward_hook(backward_hook)
+        handle_bw = target_layer.register_full_backward_hook(backward_hook)
 
         # Forward + backward
         outputs = self.model(image_magnitude, max_doppler)
@@ -668,10 +668,10 @@ class Network_Class:
                 plt.imshow(base_img, cmap='gray', alpha=0.5)
                 plt.imshow(heatmap, cmap='inferno', alpha=0.5)
                 plt.axis('off')
-                filename = f"{save_path}/sample{i}_input{c}.png"
-                plt.savefig(filename, bbox_inches='tight', pad_inches=0)
+                filename = os.path.join(save_path, f"sample{i}_input{c}.pdf")
+                plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300, format='pdf')
                 plt.close()
-                print(f"Grad-CAM heatmap saved at {filename}")
+                print(f"📄 Grad-CAM heatmap saved at {filename}")
 
     def visualize_batch(self, num_images=4):
         """
