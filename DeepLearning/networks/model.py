@@ -610,85 +610,72 @@ class Network_Class:
         return accuracy
     
 
-    def analyze_gradcam(self, save_path="gradcam_output", layer_name="layer3"):
+    def save_gradcam_maps(self, save_path="gradcam_output", layer_name="layer3"):
         os.makedirs(save_path, exist_ok=True)
         self.model.eval()
 
-        # Récupérer un seul batch
         for image_magnitude, max_doppler, labels in self.trainDataLoader:
             image_magnitude = image_magnitude.to(self.device)
             max_doppler = max_doppler.to(self.device)
-            labels = labels.view(-1, 1).to(self.device)
             break
 
-        image_magnitude.requires_grad = True
+        activations, gradients = [], []
 
-        # Hooks
-        activations = []
-        gradients = []
+        def fw_hook(m, i, o): activations.append(o)
+        def bw_hook(m, gi, go): gradients.append(go[0])
 
-        def forward_hook(module, input, output):
-            activations.append(output)
-
-        def backward_hook(module, grad_in, grad_out):
-            gradients.append(grad_out[0])
-
-        # Enregistrement des hooks
-        target_layer = getattr(self.model, layer_name)
-        handle_fw = target_layer.register_forward_hook(forward_hook)
-        handle_bw = target_layer.register_full_backward_hook(backward_hook)
-
-        # Traitement Grad-CAM pour chaque échantillon du batch
-        cams = []
-        importances = []
+        layer = getattr(self.model, layer_name)
+        h_fw = layer.register_forward_hook(fw_hook)
+        h_bw = layer.register_full_backward_hook(bw_hook)
 
         for i in range(image_magnitude.shape[0]):
             activations.clear()
             gradients.clear()
 
             x = image_magnitude[i:i+1].detach().clone().requires_grad_()
+            y = self.model(x, max_doppler[i:i+1])
+            y.backward()
 
-            output = self.model(x, max_doppler[i:i+1])
-            output.backward()
-
-            # Grad-CAM
-            act = activations[0].detach()
-            grad = gradients[0].detach()
-            weights = grad.mean(dim=(2, 3), keepdim=True)
-            cam = (weights * act).sum(dim=1)
+            A = activations[0].detach()
+            G = gradients[0].detach()
+            alpha = G.mean(dim=(2, 3), keepdim=True)
+            cam = (alpha * A).sum(dim=1)
             cam = F.relu(cam)
-            cam = F.interpolate(cam.unsqueeze(1), size=image_magnitude.shape[2:], mode='bilinear', align_corners=False)
-            cams.append(cam.squeeze().cpu().numpy())
+            cam = F.interpolate(cam.unsqueeze(1), size=x.shape[2:], mode='bilinear', align_corners=False)
+            cam = cam.squeeze().cpu().numpy()
 
-            # Importance par canal d'entrée (ablation)
-            original_pred = output.detach().item()
-            channel_importance = []
-            for c in range(x.shape[1]):
-                x_ablate = x.clone()
-                x_ablate[0, c] = 0
-                pred_ablate = self.model(x_ablate, max_doppler[i:i+1]).detach().item()
-                delta = original_pred - pred_ablate
-                channel_importance.append(delta)
-
-            importances.append(channel_importance)
-            np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(channel_importance))
-
-            # Sauvegarde de la map uniquement une fois par sample
-            base_img = x[0, 0].detach().cpu().numpy()
-            heatmap = cams[-1]
             plt.figure(figsize=(4, 4))
-            plt.imshow(base_img, cmap='gray', alpha=0.5)
-            plt.imshow(heatmap, cmap='inferno', alpha=0.5)
+            plt.imshow(x[0, 0].cpu(), cmap='gray', alpha=0.5)
+            plt.imshow(cam, cmap='inferno', alpha=0.5)
             plt.axis('off')
-            filename = os.path.join(save_path, f"sample{i}_gradcam.pdf")
-            plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300, format='pdf')
+            plt.savefig(os.path.join(save_path, f"sample{i}_gradcam.pdf"), bbox_inches='tight', pad_inches=0)
             plt.close()
-            print(f"📄 Saved Grad-CAM at {filename}")
-            print(f"📊 Saved channel importances for sample {i}")
-        
-        # Nettoyage des hooks
-        handle_fw.remove()
-        handle_bw.remove()
+
+        h_fw.remove()
+        h_bw.remove()
+
+    def save_input_channel_ablation(self, save_path="gradcam_output"):
+        os.makedirs(save_path, exist_ok=True)
+        self.model.eval()
+
+        for image_magnitude, max_doppler, labels in self.trainDataLoader:
+            image_magnitude = image_magnitude.to(self.device)
+            max_doppler = max_doppler.to(self.device)
+
+        for i in range(image_magnitude.shape[0]):
+            x = image_magnitude[i:i+1]
+            y_orig = self.model(x, max_doppler[i:i+1]).detach().item()
+            delta_list = []
+
+            for c in range(x.shape[1]):
+                x_mod = x.clone()
+                x_mod[0, c] = 0
+                y_mod = self.model(x_mod, max_doppler[i:i+1]).detach().item()
+                delta_list.append(y_orig - y_mod)
+
+            np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(delta_list))
+
+
 
 
     def visualize_batch(self, num_images=4):

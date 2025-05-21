@@ -51,7 +51,8 @@ for exp_index in args.exp_indices:
 
     myNetwork.loadWeight()  # modèle chargé automatiquement depuis le chemin par défaut
 
-    print(f"📸 Running Grad-CAM analysis...")
-    myNetwork.analyze_gradcam(save_path=os.path.join(args.output_dir, f"{exp.replace('/', '_')}_fold{fold}"))
+    print(f"📸 Running Grad-CAM analysis... (Channel Ablation)")
+    myNetwork.save_input_channel_ablation()
+    #myNetwork.analyze_gradcam(save_path=os.path.join(args.output_dir, f"{exp.replace('/', '_')}_fold{fold}"))
 
 print("✅ Grad-CAM analysis completed for all selected experiments.")
