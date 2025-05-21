@@ -611,18 +611,23 @@ class Network_Class:
     
 
     def analyze_gradcam(self, save_path="gradcam_output", layer_name="layer3"):
+        import torch.nn.functional as F
+        import matplotlib.pyplot as plt
+        import os
+
         createFolder(save_path)
         self.model.eval()
+
         # Récupérer un seul batch
         for image_magnitude, max_doppler, labels in self.trainDataLoader:
             image_magnitude = image_magnitude.to(self.device)
             max_doppler = max_doppler.to(self.device)
             labels = labels.view(-1, 1).to(self.device)
-            break  # un seul batch
+            break
 
         image_magnitude.requires_grad = True
 
-        # Hook pour récupérer les activations et gradients
+        # Hooks
         activations = []
         gradients = []
 
@@ -632,38 +637,42 @@ class Network_Class:
         def backward_hook(module, grad_in, grad_out):
             gradients.append(grad_out[0])
 
-        # Enregistre les hooks
+        # Enregistrement des hooks
         target_layer = getattr(self.model, layer_name)
         handle_fw = target_layer.register_forward_hook(forward_hook)
         handle_bw = target_layer.register_full_backward_hook(backward_hook)
 
-        # Forward + backward
-        outputs = self.model(image_magnitude, max_doppler)
-        loss = outputs.sum()
+        # Traitement Grad-CAM pour chaque échantillon du batch
+        cams = []
         self.model.zero_grad()
-        loss.backward()
 
-        # Nettoyage
+        for i in range(image_magnitude.shape[0]):
+            activations.clear()
+            gradients.clear()
+
+            output = self.model(image_magnitude[i:i+1], max_doppler[i:i+1])
+            output.backward()
+
+            act = activations[0].detach()  # (1, C, H, W)
+            grad = gradients[0].detach()   # (1, C, H, W)
+            weights = grad.mean(dim=(2, 3), keepdim=True)  # (1, C, 1, 1)
+            cam = (weights * act).sum(dim=1)  # (1, H, W)
+            cam = F.relu(cam)
+            cam = F.interpolate(cam.unsqueeze(1), size=image_magnitude.shape[2:], mode='bilinear', align_corners=False)
+            cams.append(cam.squeeze().cpu().numpy())
+
+        # Nettoyage des hooks
         handle_fw.remove()
         handle_bw.remove()
 
-        # Traitement Grad-CAM
-        act = activations[0].detach()  # (B, C, H, W)
-        grad = gradients[0].detach()   # (B, C, H, W)
-        weights = grad.mean(dim=(2, 3), keepdim=True)  # (B, C, 1, 1)
-        cam = (weights * act).sum(dim=1)               # (B, H, W)
-        cam = F.relu(cam)
-        cam = F.interpolate(cam.unsqueeze(1), size=image_magnitude.shape[2:], mode='bilinear', align_corners=False)
-        cam = cam.squeeze().cpu().numpy()              # (B, H, W)
-
-        # Traitement des entrées
+        # Données d'entrée
         inputs = image_magnitude.detach().cpu().numpy()  # (B, C, H, W)
 
         # Sauvegarde des heatmaps superposées
         for i in range(inputs.shape[0]):
             for c in range(inputs.shape[1]):
                 base_img = inputs[i, c]
-                heatmap = cam[i]
+                heatmap = cams[i]
                 plt.figure(figsize=(4, 4))
                 plt.imshow(base_img, cmap='gray', alpha=0.5)
                 plt.imshow(heatmap, cmap='inferno', alpha=0.5)
@@ -672,6 +681,7 @@ class Network_Class:
                 plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300, format='pdf')
                 plt.close()
                 print(f"📄 Grad-CAM heatmap saved at {filename}")
+
 
     def visualize_batch(self, num_images=4):
         """
