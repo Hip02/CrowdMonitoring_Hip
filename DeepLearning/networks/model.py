@@ -663,7 +663,6 @@ class Network_Class:
             max_doppler = max_doppler.to(self.device)
 
             for i in range(image_magnitude.shape[0]):
-                print(f"Processing sample {i+1}/{image_magnitude.shape[0]}...")
                 x = image_magnitude[i:i+1]
                 y_orig = self.model(x, max_doppler[i:i+1]).detach().item()
                 delta_list = []
