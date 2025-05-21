@@ -611,11 +611,7 @@ class Network_Class:
     
 
     def analyze_gradcam(self, save_path="gradcam_output", layer_name="layer3"):
-        import torch.nn.functional as F
-        import matplotlib.pyplot as plt
-        import os
-
-        createFolder(save_path)
+        os.makedirs(save_path, exist_ok=True)
         self.model.eval()
 
         # Récupérer un seul batch
@@ -644,43 +640,55 @@ class Network_Class:
 
         # Traitement Grad-CAM pour chaque échantillon du batch
         cams = []
-        self.model.zero_grad()
+        importances = []
 
         for i in range(image_magnitude.shape[0]):
             activations.clear()
             gradients.clear()
 
-            output = self.model(image_magnitude[i:i+1], max_doppler[i:i+1])
+            x = image_magnitude[i:i+1]
+            x.requires_grad = True
+            output = self.model(x, max_doppler[i:i+1])
             output.backward()
 
-            act = activations[0].detach()  # (1, C, H, W)
-            grad = gradients[0].detach()   # (1, C, H, W)
-            weights = grad.mean(dim=(2, 3), keepdim=True)  # (1, C, 1, 1)
-            cam = (weights * act).sum(dim=1)  # (1, H, W)
+            # Grad-CAM
+            act = activations[0].detach()
+            grad = gradients[0].detach()
+            weights = grad.mean(dim=(2, 3), keepdim=True)
+            cam = (weights * act).sum(dim=1)
             cam = F.relu(cam)
             cam = F.interpolate(cam.unsqueeze(1), size=image_magnitude.shape[2:], mode='bilinear', align_corners=False)
             cams.append(cam.squeeze().cpu().numpy())
 
+            # Importance par canal d'entrée (ablation)
+            original_pred = output.detach().item()
+            channel_importance = []
+            for c in range(x.shape[1]):
+                x_ablate = x.clone()
+                x_ablate[0, c] = 0
+                pred_ablate = self.model(x_ablate, max_doppler[i:i+1]).detach().item()
+                delta = original_pred - pred_ablate
+                channel_importance.append(delta)
+
+            importances.append(channel_importance)
+            np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(channel_importance))
+
+            # Sauvegarde de la map uniquement une fois par sample
+            base_img = x[0, 0].detach().cpu().numpy()
+            heatmap = cams[-1]
+            plt.figure(figsize=(4, 4))
+            plt.imshow(base_img, cmap='gray', alpha=0.5)
+            plt.imshow(heatmap, cmap='inferno', alpha=0.5)
+            plt.axis('off')
+            filename = os.path.join(save_path, f"sample{i}_gradcam.pdf")
+            plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300, format='pdf')
+            plt.close()
+            print(f"📄 Saved Grad-CAM at {filename}")
+            print(f"📊 Saved channel importances for sample {i}")
+        
         # Nettoyage des hooks
         handle_fw.remove()
         handle_bw.remove()
-
-        # Données d'entrée
-        inputs = image_magnitude.detach().cpu().numpy()  # (B, C, H, W)
-
-        # Sauvegarde des heatmaps superposées
-        for i in range(inputs.shape[0]):
-            for c in range(inputs.shape[1]):
-                base_img = inputs[i, c]
-                heatmap = cams[i]
-                plt.figure(figsize=(4, 4))
-                plt.imshow(base_img, cmap='gray', alpha=0.5)
-                plt.imshow(heatmap, cmap='inferno', alpha=0.5)
-                plt.axis('off')
-                filename = os.path.join(save_path, f"sample{i}_input{c}.pdf")
-                plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300, format='pdf')
-                plt.close()
-                print(f"📄 Grad-CAM heatmap saved at {filename}")
 
 
     def visualize_batch(self, num_images=4):
