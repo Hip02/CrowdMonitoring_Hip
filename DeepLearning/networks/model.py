@@ -658,23 +658,23 @@ class Network_Class:
         os.makedirs(save_path, exist_ok=True)
         self.model.eval()
 
-        for image_magnitude, max_doppler, labels in self.trainDataLoader:
+        for image_magnitude, max_doppler, labels in tqdm(self.trainDataLoader, desc="🔍 Channel ablation", unit="sample"):
             image_magnitude = image_magnitude.to(self.device)
             max_doppler = max_doppler.to(self.device)
 
-        for i in tqdm(range(image_magnitude.shape[0]), desc="🔍 Channel ablation"):
-            print(f"Processing sample {i+1}/{image_magnitude.shape[0]}...")
-            x = image_magnitude[i:i+1]
-            y_orig = self.model(x, max_doppler[i:i+1]).detach().item()
-            delta_list = []
+            for i in range(image_magnitude.shape[0]):
+                print(f"Processing sample {i+1}/{image_magnitude.shape[0]}...")
+                x = image_magnitude[i:i+1]
+                y_orig = self.model(x, max_doppler[i:i+1]).detach().item()
+                delta_list = []
 
-            for c in range(x.shape[1]):
-                x_mod = x.clone()
-                x_mod[0, c] = 0
-                y_mod = self.model(x_mod, max_doppler[i:i+1]).detach().item()
-                delta_list.append(y_orig - y_mod)
+                for c in range(x.shape[1]):
+                    x_mod = x.clone()
+                    x_mod[0, c] = 0
+                    y_mod = self.model(x_mod, max_doppler[i:i+1]).detach().item()
+                    delta_list.append(y_orig - y_mod)
 
-            np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(delta_list))
+                np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(delta_list))
 
 
 
