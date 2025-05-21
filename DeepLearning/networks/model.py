@@ -646,8 +646,8 @@ class Network_Class:
             activations.clear()
             gradients.clear()
 
-            x = image_magnitude[i:i+1]
-            x.requires_grad = True
+            x = image_magnitude[i:i+1].detach().clone().requires_grad_()
+
             output = self.model(x, max_doppler[i:i+1])
             output.backward()
 
