@@ -987,6 +987,7 @@ def plot_feature_per_labels_grid(
 ):
     """
     Affiche une grille 3x4 de scatter plots avec des features différentes mais un même vecteur de labels.
+    Les titres des subplots prennent la couleur spécifiée, les points sont gris.
 
     Args:
         labels (numpy.ndarray): Vecteur de labels commun (taille N).
@@ -1010,11 +1011,11 @@ def plot_feature_per_labels_grid(
     for i, feature_values in enumerate(feature_values_list):
         ax = axes[i]
         feature_values = np.array(feature_values)
-        color = colors[i] if colors else 'blue'
+        color = colors[i] if colors else 'black'
         name = feature_names[i] if feature_names else f'Feature {i+1}'
 
-        # Points individuels
-        ax.scatter(labels, feature_values, color=color, alpha=0.01)
+        # Points individuels en gris
+        ax.scatter(labels, feature_values, color='gray', alpha=0.01)
 
         # Moyennes par label
         unique_labels, counts = np.unique(labels, return_counts=True)
@@ -1023,12 +1024,17 @@ def plot_feature_per_labels_grid(
         # Affichage des moyennes
         ax.scatter(unique_labels, mean_values, color='red', label='Mean', s=60, edgecolor='black')
 
-        ax.set_title(name)
-        ax.set_xticks(unique_labels)
-        ax.set_xticklabels(unique_labels, rotation=45)
+        # Titre coloré
+        ax.set_title(name, color=color)
+
+        # Limiter les ticks x
+        ticks_to_show = np.linspace(0, len(unique_labels) - 2, 5).astype(int)
+        ax.set_xticks(unique_labels[ticks_to_show])
+        ax.set_xticklabels(unique_labels[ticks_to_show])
+
+        # Nom de l’axe y
         ax.set_ylabel(name)
 
-    #fig.suptitle('Feature values per label (12 subsets)', fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.savefig("feature_per_labels_grid.png")
 
@@ -1055,8 +1061,11 @@ def plot_correlation_matrix(features, labels, feature_names, colors, label_name=
     corr_matrix = df.corr()
 
     # Plot the heatmap
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 10))
     sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm", linewidths=0.5, ax=ax)
+
+    # Remove color bar
+    ax.collections[0].colorbar.remove()
 
     # Highlight the label row
     y_index = df.columns.get_loc(label_name)  # Get row index of the label
@@ -1065,11 +1074,11 @@ def plot_correlation_matrix(features, labels, feature_names, colors, label_name=
     # Modify tick labels with assigned colors
     for tick_label, color in zip(ax.get_xticklabels(), colors + ["black"]):  # Add black for label column
         tick_label.set_color(color)
-        tick_label.set_fontweight("bold")
+        #tick_label.set_fontweight("bold")
 
     for tick_label, color in zip(ax.get_yticklabels(), colors + ["black"]):  # Add black for label column
         tick_label.set_color(color)
-        tick_label.set_fontweight("bold")
+        #tick_label.set_fontweight("bold")
 
     # Add title and labels
     plt.title("Correlation Matrix of Features and Labels")
@@ -1133,8 +1142,11 @@ def plot_mutual_information_matrix(features, labels, feature_names, colors):
     mi_df = compute_mutual_info_matrix_all(data, all_feature_names)
     
     # Plot heatmap
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 10))
     sns.heatmap(mi_df, annot=True, fmt=".2f", cmap="coolwarm", linewidths=0.5, ax=ax)
+
+    # Remove color bar
+    ax.collections[0].colorbar.remove()
 
     # Highlight the label row
     y_index = mi_df.index.get_loc("Label")  # Get row index of the label
@@ -1143,15 +1155,21 @@ def plot_mutual_information_matrix(features, labels, feature_names, colors):
     # Modify tick labels with assigned colors
     for tick_label, color in zip(ax.get_xticklabels(), colors + ["black"]):  # Add black for label column
         tick_label.set_color(color)
-        tick_label.set_fontweight("bold")
+        #tick_label.set_fontweight("bold")
+
+    # Remove all y-ticks
+    #ax.set_yticks([])
+    #ax.set_yticklabels([])
+
 
     for tick_label, color in zip(ax.get_yticklabels(), colors + ["black"]):  # Add black for label column
         tick_label.set_color(color)
-        tick_label.set_fontweight("bold")
+        #tick_label.set_fontweight("bold")
 
     # Add title and labels
-    plt.title("Normalized Mutual Information Matrix (Features & Label)")
-    plt.show()
+    plt.title("Normalized Mutual Information Matrix of Features and Label)")
+    plt.tight_layout()
+    plt.savefig("mutual_information_matrix.pdf")
 
 
 def plot_pair_feature_space(feature1, feature2, labels, feature1_name="Feature 1", feature2_name="Feature 2"):
