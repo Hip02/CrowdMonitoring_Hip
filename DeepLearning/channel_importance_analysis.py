@@ -55,4 +55,4 @@ if __name__ == "__main__":
                         help="Fold number to run (default=1)")
     args = parser.parse_args()
 
-    average_channel_importance(args.exp, args.fold)
+    average_channel_importance(args.exp_indices, args.fold)
