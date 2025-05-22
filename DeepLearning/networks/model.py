@@ -610,51 +610,61 @@ class Network_Class:
         return accuracy
     
 
-    def save_gradcam_maps(self, save_path="gradcam_output", layer_name="layer3"):
-        os.makedirs(save_path, exist_ok=True)
+    def save_gradcam_per_experience(self, layer_name="layer3"):
         self.model.eval()
-
-        for image_magnitude, max_doppler, labels in self.trainDataLoader:
-            image_magnitude = image_magnitude.to(self.device)
-            max_doppler = max_doppler.to(self.device)
-            break
+        save_root = os.path.join(self.resultsPath, "_GradCAM_Heatmaps/")
+        os.makedirs(save_root, exist_ok=True)
 
         activations, gradients = [], []
 
         def fw_hook(m, i, o): activations.append(o)
         def bw_hook(m, gi, go): gradients.append(go[0])
 
-        layer = getattr(self.model, layer_name)
-        h_fw = layer.register_forward_hook(fw_hook)
-        h_bw = layer.register_full_backward_hook(bw_hook)
+        target_layer = getattr(self.model, layer_name)
+        h_fw = target_layer.register_forward_hook(fw_hook)
+        h_bw = target_layer.register_full_backward_hook(bw_hook)
 
-        for i in range(image_magnitude.shape[0]):
-            activations.clear()
-            gradients.clear()
+        sample_index = 0
+        for image_magnitude, max_doppler, labels in tqdm(self.trainDataLoader, desc="📡 Grad-CAM Computation", unit="sample"):
+            image_magnitude = image_magnitude.to(self.device)
+            max_doppler = max_doppler.to(self.device)
+            labels = labels.view(-1, 1).to(self.device)
 
-            x = image_magnitude[i:i+1].detach().clone().requires_grad_()
-            y = self.model(x, max_doppler[i:i+1])
-            y.backward()
+            for i in range(image_magnitude.shape[0]):
+                x = image_magnitude[i:i+1].detach().clone().requires_grad_()
+                activations.clear()
+                gradients.clear()
 
-            A = activations[0].detach()
-            G = gradients[0].detach()
-            alpha = G.mean(dim=(2, 3), keepdim=True)
-            cam = (alpha * A).sum(dim=1)
-            cam = F.relu(cam)
-            cam = F.interpolate(cam.unsqueeze(1), size=x.shape[2:], mode='bilinear', align_corners=False)
-            cam = cam.squeeze().cpu().numpy()
+                output = self.model(x, max_doppler[i:i+1])
+                output.backward()
 
-            plt.figure(figsize=(4, 4))
-            plt.imshow(x[0, 0].cpu(), cmap='gray', alpha=0.5)
-            plt.imshow(cam, cmap='inferno', alpha=0.5)
-            plt.axis('off')
-            plt.savefig(os.path.join(save_path, f"sample{i}_gradcam.pdf"), bbox_inches='tight', pad_inches=0)
-            plt.close()
+                A = activations[0].detach()
+                G = gradients[0].detach()
+                alpha = G.mean(dim=(2, 3), keepdim=True)
+                cam = (alpha * A).sum(dim=1)
+                cam = F.relu(cam)
+                cam = F.interpolate(cam.unsqueeze(1), size=x.shape[2:], mode='bilinear', align_corners=False)
+                cam = cam.squeeze().cpu().numpy()
+
+                exp_name, frame_idx = self.testDataLoader.dataset.get_exp_and_frame(sample_index + i)
+                exp_folder = os.path.join(save_root, exp_name)
+                os.makedirs(exp_folder, exist_ok=True)
+
+                # Sauvegarde
+                fig_path = os.path.join(exp_folder, f"frame_{frame_idx:04d}.png")
+                plt.figure(figsize=(4, 4))
+                plt.imshow(cam, cmap='inferno')
+                plt.axis('off')
+                plt.savefig(fig_path, bbox_inches='tight', pad_inches=0)
+                plt.close()
+
+            sample_index += image_magnitude.shape[0]
 
         h_fw.remove()
         h_bw.remove()
+        print(f"✅ Grad-CAM maps saved in {save_root}")
 
-    def save_input_channel_ablation(self, save_path="gradcam_output"):
+    def save_input_channel_ablation(self, save_path="gradcam_output", noise_factor=1.0):
         os.makedirs(save_path, exist_ok=True)
         self.model.eval()
 
