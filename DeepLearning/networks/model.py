@@ -625,7 +625,7 @@ class Network_Class:
         h_bw = target_layer.register_full_backward_hook(bw_hook)
 
         sample_index = 0
-        for image_magnitude, max_doppler, labels in tqdm(self.trainDataLoader, desc="📡 Grad-CAM Computation", unit="sample"):
+        for image_magnitude, max_doppler, labels in tqdm(self.testDataLoader, desc="📡 Grad-CAM Computation", unit="sample"):
             image_magnitude = image_magnitude.to(self.device)
             max_doppler = max_doppler.to(self.device)
             labels = labels.view(-1, 1).to(self.device)
