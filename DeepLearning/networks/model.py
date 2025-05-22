@@ -632,8 +632,6 @@ class Network_Class:
 
             batch_size = image_magnitude.shape[0]
 
-            print("Batch size: ", batch_size)
-
             for i in range(batch_size):
                 x = image_magnitude[i:i+1].detach().clone().requires_grad_()
                 activations.clear()
@@ -650,7 +648,6 @@ class Network_Class:
                 cam = F.interpolate(cam.unsqueeze(1), size=x.shape[2:], mode='bilinear', align_corners=False)
                 cam = cam.squeeze().cpu().numpy()
 
-                print(f"Saving Grad-CAM # {sample_index + i}")
                 exp_name, frame_idx = self.testDataLoader.dataset.get_exp_and_frame(sample_index + i)
                 exp_folder = os.path.join(save_root, exp_name)
                 os.makedirs(exp_folder, exist_ok=True)
