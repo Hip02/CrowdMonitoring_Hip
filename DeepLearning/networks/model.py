@@ -651,8 +651,7 @@ class Network_Class:
                 os.makedirs(exp_folder, exist_ok=True)
 
                 # Sauvegarde
-                print(f"Saving Grad-CAM for {exp_name} at frame {frame_idx}")
-                fig_path = os.path.join(exp_folder, f"frame_{frame_idx:04d}.png")
+                fig_path = os.path.join(exp_folder, f"frame_{frame_idx}.png")
                 plt.figure(figsize=(4, 4))
                 plt.imshow(cam, cmap='inferno')
                 plt.axis('off')
