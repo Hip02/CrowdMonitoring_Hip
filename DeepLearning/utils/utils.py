@@ -940,7 +940,7 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
             else:
                 overlayed = cv2.addWeighted(radar_colored, 0.6, gradcam_resized, 0.4, 0)
         else:
-            print(f"⚠️  Grad-CAM heatmap not found for frame {frame_idx}. Using radar map instead.")
+            print(f"⚠️  Grad-CAM heatmap not found at {gradcam_path}. Using radar map instead.")
             overlayed = radar_colored  # Pas de heatmap disponible
 
         radar_with_border = cv2.copyMakeBorder(overlayed, t, t, t, t, cv2.BORDER_CONSTANT, value=(0, 0, 255))
