@@ -929,22 +929,23 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
         # === Chargement de la heatmap Grad-CAM ===
         gradcam_path = os.path.join(results_path, "_GradCAM_Heatmaps", f"{exp_name}", f"frame_{frame_idx}.png")
         if os.path.exists(gradcam_path):
-            gradcam = cv2.imread(gradcam_path, cv2.IMREAD_UNCHANGED)
-            gradcam_resized = cv2.resize(gradcam, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
+            # Lecture image (même si RGBA, on garde en BGR ici)
+            gradcam_raw = cv2.imread(gradcam_path, cv2.IMREAD_COLOR)
+            gradcam_resized = cv2.resize(gradcam_raw, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
 
-            # Superposition RGBA correcte
-            if gradcam_resized.shape[-1] == 4:
-                alpha = gradcam_resized[..., 3] / 255.0  # Normalisé
-                gradcam_rgb = gradcam_resized[..., :3].astype(np.float32)
-                radar_colored_float = radar_colored.astype(np.float32)
+            # Convertir en niveaux de gris pour créer une "pseudo-transparence"
+            gradcam_gray = cv2.cvtColor(gradcam_resized, cv2.COLOR_BGR2GRAY)
+            heatmap_mask = cv2.normalize(gradcam_gray, None, 0, 1.0, cv2.NORM_MINMAX)
 
-                # Superposition manuelle avec transparence
-                overlayed = (1 - alpha[..., None]) * radar_colored_float + alpha[..., None] * gradcam_rgb
-                overlayed = np.clip(overlayed, 0, 255).astype(np.uint8)
-            else:
-                # Si pas d'alpha, on fait un blending simple
-                gradcam_bgr = cv2.cvtColor(gradcam_resized, cv2.COLOR_RGB2BGR)
-                overlayed = cv2.addWeighted(radar_colored, 0.6, gradcam_bgr, 0.4, 0)
+            # Appliquer colormap à la gradcam pour visuel
+            gradcam_color = cv2.applyColorMap(gradcam_gray, cv2.COLORMAP_JET).astype(np.float32)
+            radar_float = radar_colored.astype(np.float32)
+
+            # Superposition manuelle en utilisant le "masque de chaleur"
+            alpha = np.expand_dims(heatmap_mask, axis=-1)  # (H, W, 1)
+            overlayed = (1 - alpha) * radar_float + alpha * gradcam_color
+            overlayed = np.clip(overlayed, 0, 255).astype(np.uint8)
+
 
         else:
             print(f"⚠️  Grad-CAM heatmap not found at {gradcam_path}. Using radar map instead.")
