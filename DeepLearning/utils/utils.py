@@ -932,13 +932,20 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
             gradcam = cv2.imread(gradcam_path, cv2.IMREAD_UNCHANGED)
             gradcam_resized = cv2.resize(gradcam, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
 
-            # Si alpha channel (RGBA), convert to BGR for overlay
+            # Superposition RGBA correcte
             if gradcam_resized.shape[-1] == 4:
-                alpha = gradcam_resized[..., 3] / 255.0
-                gradcam_rgb = gradcam_resized[..., :3]
-                overlayed = cv2.convertScaleAbs((1 - alpha[..., None]) * radar_colored + alpha[..., None] * gradcam_rgb)
+                alpha = gradcam_resized[..., 3] / 255.0  # Normalisé
+                gradcam_rgb = gradcam_resized[..., :3].astype(np.float32)
+                radar_colored_float = radar_colored.astype(np.float32)
+
+                # Superposition manuelle avec transparence
+                overlayed = (1 - alpha[..., None]) * radar_colored_float + alpha[..., None] * gradcam_rgb
+                overlayed = np.clip(overlayed, 0, 255).astype(np.uint8)
             else:
-                overlayed = cv2.addWeighted(radar_colored, 0.6, gradcam_resized, 0.4, 0)
+                # Si pas d'alpha, on fait un blending simple
+                gradcam_bgr = cv2.cvtColor(gradcam_resized, cv2.COLOR_RGB2BGR)
+                overlayed = cv2.addWeighted(radar_colored, 0.6, gradcam_bgr, 0.4, 0)
+
         else:
             print(f"⚠️  Grad-CAM heatmap not found at {gradcam_path}. Using radar map instead.")
             overlayed = radar_colored  # Pas de heatmap disponible
