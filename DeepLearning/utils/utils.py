@@ -927,7 +927,7 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
         radar_colored = cv2.applyColorMap(radar_map_uint8, cv2.COLORMAP_VIRIDIS)
 
         # === Chargement de la heatmap Grad-CAM ===
-        gradcam_path = os.path.join(results_path, "_GradCAM_Heatmaps", f"NewExp{exp_name}", f"frame_{frame_idx}.png")
+        gradcam_path = os.path.join(results_path, "_GradCAM_Heatmaps", f"{exp_name}", f"frame_{frame_idx}.png")
         if os.path.exists(gradcam_path):
             gradcam = cv2.imread(gradcam_path, cv2.IMREAD_UNCHANGED)
             gradcam_resized = cv2.resize(gradcam, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
