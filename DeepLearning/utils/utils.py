@@ -806,12 +806,7 @@ def compare_multiple_learning_curves(
 
 
 def generate_prediction_video(exp_name, data_loader, results_path, save_path, output_fps=5, frame_skip=3):
-    import os
-    import numpy as np
-    import cv2
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
+    
     gts = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_gts.npy"), allow_pickle=True)
     preds = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_preds.npy"), allow_pickle=True)
     frames_number = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_frames.npy"), allow_pickle=True)
@@ -896,6 +891,114 @@ def generate_prediction_video(exp_name, data_loader, results_path, save_path, ou
 
     out.release()
     print(f"✅ Vidéo exportée : {save_path}")
+
+
+def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, save_path, output_fps=5, frame_skip=3):
+    gts = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_gts.npy"), allow_pickle=True)
+    preds = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_preds.npy"), allow_pickle=True)
+    frames_number = np.load(os.path.join(results_path, "_PerExperimentPlots", f"{exp_name}_frames.npy"), allow_pickle=True)
+
+    assert len(gts) == len(preds) == len(frames_number), "Longueurs incompatibles"
+
+    sample_frame = data_loader.get_video_frame(exp_name, frames_number[0])
+    radar_map = data_loader.get_magnitude(exp_name, frames_number[0])
+
+    H, W, _ = sample_frame.shape
+    radar_size = H
+    graph_height = 3 * 200
+
+    combined_top_w = W + radar_size
+    output_size = (combined_top_w, H + graph_height)
+
+    out = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), output_fps, output_size)
+
+    for i in range(0, len(frames_number), frame_skip):
+        frame_idx = frames_number[i]
+
+        frame = data_loader.get_video_frame(exp_name, frame_idx)
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        t = 15
+        frame_bgr = cv2.copyMakeBorder(frame_bgr, t, t, t, t, cv2.BORDER_CONSTANT, value=(255, 0, 0))
+
+        # === RDM ===
+        radar_map = data_loader.get_magnitude(exp_name, frame_idx)
+        radar_map_resized = cv2.resize(radar_map, (radar_size, radar_size), interpolation=cv2.INTER_NEAREST)
+        radar_map_uint8 = cv2.normalize(radar_map_resized, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        radar_colored = cv2.applyColorMap(radar_map_uint8, cv2.COLORMAP_VIRIDIS)
+
+        # === Chargement de la heatmap Grad-CAM ===
+        gradcam_path = os.path.join(results_path, "_GradCAM_Heatmaps", f"NewExp{exp_name}", f"frame_{frame_idx}.png")
+        if os.path.exists(gradcam_path):
+            gradcam = cv2.imread(gradcam_path, cv2.IMREAD_UNCHANGED)
+            gradcam_resized = cv2.resize(gradcam, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
+
+            # Si alpha channel (RGBA), convert to BGR for overlay
+            if gradcam_resized.shape[-1] == 4:
+                alpha = gradcam_resized[..., 3] / 255.0
+                gradcam_rgb = gradcam_resized[..., :3]
+                overlayed = cv2.convertScaleAbs((1 - alpha[..., None]) * radar_colored + alpha[..., None] * gradcam_rgb)
+            else:
+                overlayed = cv2.addWeighted(radar_colored, 0.6, gradcam_resized, 0.4, 0)
+        else:
+            overlayed = radar_colored  # Pas de heatmap disponible
+
+        radar_with_border = cv2.copyMakeBorder(overlayed, t, t, t, t, cv2.BORDER_CONSTANT, value=(0, 0, 255))
+
+        # === Texte ===
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1.0
+        color_red = (0, 0, 255)
+        color_blue = (255, 0, 0)
+        thickness = 2
+        y_offset = H - 20
+        x_offset = 50
+
+        cv2.putText(frame_bgr, f"YOLO prediction: {int(gts[i])}", (x_offset, y_offset), font, font_scale, color_blue, thickness)
+        cv2.putText(radar_with_border, f"Radar-based model prediction: {round(preds[i], 1)}", (x_offset, y_offset), font, font_scale, color_red, thickness)
+
+        top_combined = np.hstack((frame_bgr, radar_with_border))
+
+        # === Graphe de prédiction globale ===
+        fig, ax = plt.subplots(figsize=(combined_top_w / 100, graph_height / 100), dpi=100)
+        fig.subplots_adjust(left=0.05, right=0.98, top=0.92, bottom=0.15)
+        ax.plot(gts, label="YOLO (GT)", color="red")
+        ax.plot(preds, label="Prediction", color="blue")
+        ax.axvline(x=i, color="red", linestyle="-", linewidth=2)
+
+        total_duration = 60
+        total_frames = len(gts)
+        ax.set_xlim([0, total_frames - 1])
+        ax.set_ylim([0, max(max(preds), max(gts)) + 1])
+        ax.set_title("Estimation of the number of people in the scene")
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("People count")
+        ax.grid(True, linestyle='--', alpha=0.6)
+        ax.legend(loc="upper right", fontsize=16)
+
+        ticks = np.linspace(0, total_frames - 1, total_duration // 5 + 1, dtype=int)
+        labels = [str(i * 5) for i in range(len(ticks))]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(labels)
+
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+        plot_img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        plot_img = plot_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        plt.close(fig)
+
+        graph_width = top_combined.shape[1]
+        plot_img_resized = cv2.resize(plot_img, (graph_width, graph_height))
+        final_frame = np.vstack((top_combined, plot_img_resized)).astype(np.uint8)
+
+        if final_frame.shape[1] != output_size[0] or final_frame.shape[0] != output_size[1]:
+            final_frame = cv2.resize(final_frame, output_size)
+
+        out.write(final_frame)
+
+    out.release()
+    print(f"✅ Vidéo exportée : {save_path}")
+
+
 
 def createFolder(desiredPath): 
     if not os.path.exists(desiredPath):

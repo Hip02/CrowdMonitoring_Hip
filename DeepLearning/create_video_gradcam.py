@@ -36,7 +36,7 @@ for exp in l_exp :
         for exp_n in exp_ns:
             exp_name = f"NewExp{exp_n}"
 
-            generate_prediction_video(
+            generate_prediction_video_with_gradcam(
                 exp_name=exp_name,
                 data_loader=data_loader,
                 results_path=resultsPath,
