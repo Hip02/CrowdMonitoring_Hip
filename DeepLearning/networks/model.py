@@ -632,6 +632,8 @@ class Network_Class:
 
             batch_size = image_magnitude.shape[0]
 
+            print("Batch size: ", batch_size)
+
             for i in range(batch_size):
                 x = image_magnitude[i:i+1].detach().clone().requires_grad_()
                 activations.clear()
@@ -660,7 +662,7 @@ class Network_Class:
                 plt.savefig(fig_path, bbox_inches='tight', pad_inches=0)
                 plt.close()
 
-            sample_index += image_magnitude.shape[0]
+            sample_index += batch_size
 
         h_fw.remove()
         h_bw.remove()
