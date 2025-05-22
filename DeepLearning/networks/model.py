@@ -658,6 +658,8 @@ class Network_Class:
         os.makedirs(save_path, exist_ok=True)
         self.model.eval()
 
+        cnt = 0
+
         for image_magnitude, max_doppler, labels in tqdm(self.trainDataLoader, desc="🔍 Channel ablation", unit="sample"):
             image_magnitude = image_magnitude.to(self.device)
             max_doppler = max_doppler.to(self.device)
@@ -672,8 +674,9 @@ class Network_Class:
                     x_mod[0, c] = 0
                     y_mod = self.model(x_mod, max_doppler[i:i+1]).detach().item()
                     delta_list.append(y_orig - y_mod)
-
-                np.save(os.path.join(save_path, f"sample{i}_channel_importance.npy"), np.array(delta_list))
+                
+                np.save(os.path.join(save_path, f"sample{cnt}_channel_importance.npy"), np.array(delta_list))
+                cnt += 1
 
 
 
