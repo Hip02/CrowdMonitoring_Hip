@@ -12,7 +12,7 @@ all = [f"NewExp{i}" for i in range(1, 51)]
 
 
 l_exp = [f"Regression/AFinalExp16"]
-folds = list(range(6, 7))
+folds = list(range(2, 3))
 
 for exp in l_exp :
     for fold in folds :
@@ -31,7 +31,7 @@ for exp in l_exp :
         if not os.path.exists(resultsPath):
             os.makedirs(resultsPath)
 
-        exp_ns = [35]
+        exp_ns = [26]
         
         for exp_n in exp_ns:
             exp_name = f"NewExp{exp_n}"
