@@ -1637,4 +1637,4 @@ def train_on_custom_folds(model, data_loader, feature_names, folds_path="folds_c
     mean_mse = np.mean(mse_list)
     print(f"\n🔢 MSE moyenne sur tous les folds: {mean_mse:.2f}")
 
-    return mean_mse
+    return all_y_pred, all_y_test

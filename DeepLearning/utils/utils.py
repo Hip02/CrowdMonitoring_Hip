@@ -919,24 +919,27 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
     createFolder(save_path)
 
     for exp_name, data in results_by_experiment.items():
+        exp_number = int(exp_name.split("Exp")[1])
         frames = np.array(data["frames"], dtype=int)
         preds = np.array(data["preds"])
         gts = np.array(data["gts"])
 
         time = 60 * (frames - frames.min()) / (frames.max() - frames.min())
         xticks = np.linspace(time.min(), time.max(), num=13)
-        ylim = (0, 25)
+        ylim = (0, 7)
+        xlim = (0, 60)
         # 1️⃣ Raw prediction vs ground truth
         plt.figure(figsize=(16, 5))
-        plt.plot(time, gts, label="YOLO (Ground Truth)", color='blue', alpha=0.7)
+        plt.plot(time, gts, label="YOLO (Pseudo Label)", color='blue', alpha=0.7)
         plt.plot(time, preds, label="Model Prediction", color='red', alpha=0.6)
         plt.xlabel("Time (s)")
         plt.ylabel("Number of people")
-        plt.title(f"Experiment: {exp_name} — Raw Prediction vs Ground Truth")
-        plt.legend()
+        plt.title(f"Prediction vs Pseudo-label across experiment {exp_number}")
+        plt.legend(loc="upper right")
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
         plt.xticks(xticks)
         plt.ylim(ylim)
+        plt.xlim(xlim)
         plt.tight_layout()
         plt.savefig(f"{save_path}/{exp_name}_raw_pred_vs_gt.pdf")
         plt.close()
@@ -999,8 +1002,8 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         pred_means = [np.mean(preds_per_sec[s]) for s in sec_sorted]
         pred_stds = [np.std(preds_per_sec[s]) for s in sec_sorted]
 
-        plt.figure(figsize=(16, 5))
-        plt.plot(time, gts, label="YOLO (GT)", color='blue', alpha=0.7)
+        plt.figure(figsize=(16, 3))
+        plt.plot(time, gts, label="YOLO (Pseudo Label)", color='blue', alpha=0.7)
         plt.plot(sec_sorted, pred_means, label="Model Prediction - avg/sec", color='red')
         plt.fill_between(sec_sorted,
                          np.array(pred_means) - np.array(pred_stds),
@@ -1008,13 +1011,14 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
                          color='red', alpha=0.2, label="Std Dev (Prediction)")
         plt.xlabel("Time (s)")
         plt.ylabel("People Count")
-        plt.title(f"Experiment: {exp_name} — GT (raw) vs Aggregated Prediction + Std")
+        #plt.title(f"Experiment: {exp_name} — GT (raw) vs Aggregated Prediction + Std")
         plt.legend()
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
         plt.xticks(xticks)
         plt.ylim(ylim)
+        plt.xlim((0, 60))
         plt.tight_layout()
-        plt.savefig(f"{save_path}/{exp_name}_rawGT_aggPred_std.pdf")
+        plt.savefig(f"{save_path}/{exp_name}_rawGT_aggPred_std.png", transparent=True)
         plt.close()
         mae_rawGT_aggPred = mean_absolute_error(gts, np.interp(time, sec_sorted, pred_means))
         print(f"[{exp_name}] MAE - Raw GT vs Aggregated Pred: {mae_rawGT_aggPred:.2f}")

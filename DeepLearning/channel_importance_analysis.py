@@ -1,8 +1,13 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
-def average_channel_importance(input_folder, output_file="average_channel_importance.npy"):
+def average_channel_importance(exp, fold):
+    base_folder = "/linux/hhilgers/Code/CrowdMonitoring_Hip/DeepLearning/gradcam_output"
+    folder_name = f"Regression_AFinalExp{exp}_fold{fold}"
+    input_folder = os.path.join(base_folder, folder_name)
+
     all_importances = []
 
     for fname in os.listdir(input_folder):
@@ -13,14 +18,14 @@ def average_channel_importance(input_folder, output_file="average_channel_import
                 all_importances.append(arr)
 
     if not all_importances:
-        print("❌ No valid .npy files found.")
+        print("❌ No valid .npy files found in", input_folder)
         return
 
     all_importances = np.stack(all_importances)
     mean_importance = all_importances.mean(axis=0)
     std_importance = all_importances.std(axis=0)
 
-    np.save(os.path.join(input_folder, output_file), mean_importance)
+    np.save(os.path.join(input_folder, "average_channel_importance.npy"), mean_importance)
 
     # Plot
     channel_labels = [f"Magnitude {i+1}" for i in range(10)] + [f"Phase Δϕ {i+1}" for i in range(10)]
@@ -31,15 +36,21 @@ def average_channel_importance(input_folder, output_file="average_channel_import
     plt.axhline(0, color='black', linewidth=0.8, linestyle='--')
     plt.xticks(range(20), channel_labels, rotation=45, ha='right')
     plt.ylabel("Avg. Prediction Change (Δy)")
-    plt.title("Average Input Channel Importance over Multiple Samples")
+    plt.title(f"Average Channel Importance (Exp {exp}, Fold {fold})")
     plt.tight_layout()
 
     plot_path = os.path.join(input_folder, "average_channel_importance.pdf")
     plt.savefig(plot_path, format='pdf')
     plt.close()
 
-    print(f"✅ Saved average importance vector to {output_file}")
+    print(f"✅ Saved average importance vector to {input_folder}/average_channel_importance.npy")
     print(f"📊 Plot saved to {plot_path}")
 
-# Exemple d'utilisation :
-average_channel_importance("/Users/hippolytehilgers/Downloads/Regression_AFinalExp16_fold6")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-exp", "--exp_indices", type=int, required=True, help="Experiment index, e.g., 16")
+    parser.add_argument("-fold", "--fold", type=int, required=True, help="Fold number, e.g., 7")
+    args = parser.parse_args()
+
+    average_channel_importance(args.exp, args.fold)
