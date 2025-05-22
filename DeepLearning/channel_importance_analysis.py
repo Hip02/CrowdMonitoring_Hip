@@ -15,7 +15,7 @@ def average_channel_importance(exp, fold):
             path = os.path.join(input_folder, fname)
             arr = np.load(path)
             if arr.shape[0] == 20:
-                all_importances.append(arr)
+                all_importances.append(np.abs(arr))
 
     if not all_importances:
         print("❌ No valid .npy files found in", input_folder)
