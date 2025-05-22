@@ -25,8 +25,6 @@ for exp in l_exp :
 
         data_loader = DataLoader(base_path, param, exp_list=all, to_load=to_load)
         
-        print(len(data_loader))
-
         resultsPath = os.path.join("results", exp, f"fold{fold}", f"fold{fold}")
 
         # Create the directory
