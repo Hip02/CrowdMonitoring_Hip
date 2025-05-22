@@ -630,7 +630,9 @@ class Network_Class:
             max_doppler = max_doppler.to(self.device)
             labels = labels.view(-1, 1).to(self.device)
 
-            for i in range(image_magnitude.shape[0]):
+            batch_size = image_magnitude.shape[0]
+
+            for i in range(batch_size):
                 x = image_magnitude[i:i+1].detach().clone().requires_grad_()
                 activations.clear()
                 gradients.clear()
