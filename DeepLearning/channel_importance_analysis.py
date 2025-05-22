@@ -49,9 +49,10 @@ def average_channel_importance(exp, fold):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-exp", "--exp_indices", type=int, required=True, help="Experiment index, e.g., 16")
-    parser.add_argument("-fold", "--fold", type=int, required=True, help="Fold number, e.g., 7")
+    parser.add_argument("-exp", "--exp_indices", type=int, nargs='+', required=True,
+                        help="Indices of experiments to run (in l_exp list)")
+    parser.add_argument("-fold", "--fold", type=int, default=1,
+                        help="Fold number to run (default=1)")
     args = parser.parse_args()
 
     average_channel_importance(args.exp, args.fold)
-    # 
