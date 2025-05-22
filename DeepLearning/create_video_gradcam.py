@@ -7,7 +7,7 @@ import cv2
 import os
 
 # Load Data
-base_path = "/linux/hhilgers/Dataset"
+base_path = "/home/hhilgers/Dataset"
 all = [f"NewExp{i}" for i in range(1, 51)]
 
 
