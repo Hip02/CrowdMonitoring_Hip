@@ -74,7 +74,7 @@ border_colors = {
 }
 
 # Création de la figure
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(24, 8), sharex=True, sharey=True)
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(24, 10), sharex=True, sharey=True)
 axs = axs.flatten()
 
 # Échelle Y uniforme (fixée à 0-26)
