@@ -19,6 +19,10 @@ plot_label_distribution(labels, filename="test_labels_distribution.pdf")
 
 
 ## SECOND GRAPH
+
+ft_size = 15
+lbl_size = 14
+
 # Paramètres
 groups_size = 1000
 num_experiments = 30  # 10x5 grid
@@ -90,11 +94,11 @@ for plot_idx, (original_idx, mean_val) in enumerate(sorted_groups):
     color = scalar_map.to_rgba(mean_val)
 
     axs[plot_idx].plot(time, group_labels, color=color, linewidth=1.8)
-    axs[plot_idx].set_title(f'exp {original_idx+1} | µ = {mean_val:.2f}', fontsize=10)
+    axs[plot_idx].set_title(f'exp {original_idx+1} | µ = {mean_val:.2f}', fontsize=ft_size)
     axs[plot_idx].grid(True, linestyle='--', alpha=0.6)
     axs[plot_idx].set_ylim(ymin, ymax)
     axs[plot_idx].set_xlim(0, duration_sec)
-    axs[plot_idx].tick_params(axis='both', labelsize=8)
+    axs[plot_idx].tick_params(axis='both', labelsize=lbl_size)
 
     # Catégorie et couleur de bordure
     category = get_density_category(mean_val)
@@ -105,14 +109,14 @@ for plot_idx, (original_idx, mean_val) in enumerate(sorted_groups):
 
 # Étiquettes des axes sur les bords
 for i in range(n_rows):
-    axs[i * n_cols].set_ylabel("People", fontsize=10)
+    axs[i * n_cols].set_ylabel("People", fontsize=ft_size)
 for j in range(n_cols):
-    axs[(n_rows - 1) * n_cols + j].set_xlabel("Time (s)", fontsize=10)
+    axs[(n_rows - 1) * n_cols + j].set_xlabel("Time (s)", fontsize=ft_size)
 
 # Colorbar
 cbar_ax = fig.add_axes([0.92, 0.25, 0.015, 0.5])
 cbar = fig.colorbar(scalar_map, cax=cbar_ax)
-cbar.set_label('Mean number of people', fontsize=12)
+cbar.set_label('Mean number of people', fontsize=ft_size+2)
 
 # Légende des catégories
 from matplotlib.patches import Patch
@@ -123,14 +127,17 @@ legend_elements = [
     Patch(facecolor='white', edgecolor=border_colors["High"], label=f'High ({thresholds[2]} < µ ≤ {thresholds[3]})', linewidth=2.5),
     Patch(facecolor='white', edgecolor=border_colors["Very High"], label=f'Very High (µ > {thresholds[3]})', linewidth=2.5)
 ]
-fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.92), ncol=5, fontsize=12, frameon=False)
+fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.92), ncol=5, fontsize=ft_size+2, frameon=False)
 
 # Mise en page finale
 plt.tight_layout(rect=[0, 0, 0.9, 0.88])
 plt.subplots_adjust(top=0.85)
-fig.suptitle("Experiments sorted by average number of people (5 Density Categories Highlighted)", fontsize=18, y=0.95)
+fig.suptitle("Experiments sorted by average number of people (5 Density Categories Highlighted)", fontsize=ft_size+8, y=0.95)
 
 plt.savefig("test_experiments_sorted_by_density.pdf")
+
+# Print saved path
+print("✅ Saved figure to test_experiments_sorted_by_density.pdf")
 
 # Affichage des indices par catégorie
 print("\n=== Category indices by density level ===")

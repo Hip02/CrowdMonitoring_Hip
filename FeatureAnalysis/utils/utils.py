@@ -1231,6 +1231,9 @@ def plot_label_distribution(labels, filename="label_distribution.pdf", title="Nu
 
     plt.savefig(filename)
 
+    # Print saved path
+    print(f"Label distribution saved as {filename}")
+
 def define_models():
     """Définit les modèles de classification."""
     return {
