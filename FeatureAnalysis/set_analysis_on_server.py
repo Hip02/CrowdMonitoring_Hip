@@ -130,8 +130,9 @@ legend_elements = [
 fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.92), ncol=5, fontsize=ft_size+2, frameon=False)
 
 # Mise en page finale
-plt.tight_layout(rect=[0, 0, 0.8, 0.88]) 
-plt.subplots_adjust(top=0.75)
+plt.tight_layout(rect=[0, 0, 0.88, 0.84])
+fig.subplots_adjust(top=0.85, right=0.88)
+
 fig.suptitle("Experiments sorted by average number of people (5 Density Categories Highlighted)", fontsize=ft_size+8, y=0.95)
 
 plt.savefig("test_experiments_sorted_by_density.pdf")
