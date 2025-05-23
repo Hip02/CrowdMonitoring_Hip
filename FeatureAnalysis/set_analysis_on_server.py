@@ -74,7 +74,7 @@ border_colors = {
 }
 
 # Création de la figure
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(24, 10), sharex=True, sharey=True)
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(24, 8), sharex=True, sharey=True)
 axs = axs.flatten()
 
 # Échelle Y uniforme (fixée à 0-26)
@@ -130,7 +130,7 @@ legend_elements = [
 fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.92), ncol=5, fontsize=ft_size+2, frameon=False)
 
 # Mise en page finale
-plt.tight_layout(rect=[0, 0, 0.9, 0.88])
+plt.tight_layout() #rect=[0, 0, 0.9, 0.88]
 plt.subplots_adjust(top=0.85)
 fig.suptitle("Experiments sorted by average number of people (5 Density Categories Highlighted)", fontsize=ft_size+8, y=0.95)
 
