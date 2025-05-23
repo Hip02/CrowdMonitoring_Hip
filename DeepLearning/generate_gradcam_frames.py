@@ -6,8 +6,8 @@ import glob
 import matplotlib.pyplot as plt
 
 # ====== PARAMÈTRES À CONFIGURER ======
-exp_number = 16
-fold_number = 0
+exp_number = 26
+fold_number = 2
 num_samples = 10
 frame_indices = sorted(random.sample(range(1000), num_samples))
 output_dir = "./output_gradcam_pairs"
