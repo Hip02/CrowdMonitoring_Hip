@@ -947,8 +947,6 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
             overlayed = (1 - alpha) * radar_float + alpha * gradcam_colored
             overlayed = np.clip(overlayed, 0, 255).astype(np.uint8)
 
-
-
         else:
             print(f"⚠️  Grad-CAM heatmap not found at {gradcam_path}. Using radar map instead.")
             overlayed = radar_colored  # Pas de heatmap disponible
@@ -1040,6 +1038,7 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
 
         time = 60 * (frames - frames.min()) / (frames.max() - frames.min())
         xticks = np.linspace(time.min(), time.max(), num=13)
+        yticks = np.linspace(0, 20, num=5)
         ylim = (0, 7)
         xlim = (0, 60)
         # 1️⃣ Raw prediction vs ground truth
@@ -1048,10 +1047,11 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         plt.plot(time, preds, label="Model Prediction", color='red', alpha=0.6)
         plt.xlabel("Time (s)")
         plt.ylabel("Number of people")
-        plt.title(f"Prediction vs Pseudo-label across experiment {exp_number}")
+        plt.title(f"Prediction vs Pseudo-label across experiment {exp_number-50}")
         plt.legend(loc="upper right")
         plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.4)
         plt.xticks(xticks)
+        plt.yticks(yticks)
         plt.ylim(ylim)
         plt.xlim(xlim)
         plt.tight_layout()

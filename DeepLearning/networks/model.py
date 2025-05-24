@@ -644,7 +644,7 @@ class Network_Class:
                 G = gradients[0].detach()
                 alpha = G.mean(dim=(2, 3), keepdim=True)
                 cam = (alpha * A).sum(dim=1)
-                cam = F.relu(cam)
+                #cam = F.relu(cam)
                 cam = F.interpolate(cam.unsqueeze(1), size=x.shape[2:], mode='bilinear', align_corners=False)
                 cam = cam.squeeze().cpu().numpy()
 
