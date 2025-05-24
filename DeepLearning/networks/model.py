@@ -655,7 +655,7 @@ class Network_Class:
                 # Sauvegarde
                 fig_path = os.path.join(exp_folder, f"frame_{frame_idx}.png")
                 plt.figure(figsize=(4, 4))
-                plt.imshow(cam, cmap='inferno')
+                plt.imshow(cam, cmap='gray')
                 plt.axis('off')
                 plt.savefig(fig_path, bbox_inches='tight', pad_inches=0)
                 plt.close()
