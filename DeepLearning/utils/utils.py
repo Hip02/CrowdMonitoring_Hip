@@ -944,7 +944,7 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
             gradcam_for_cmap = (gradcam_clipped + 1.0) / 2.0  # -> [0, 1]
 
             # 4. Appliquer la colormap seismic via matplotlib
-            cmap = cm.bwr
+            cmap = cm.seismis_r
             gradcam_colored = cmap(gradcam_for_cmap)[:, :, :3]  # on enlève l’alpha
             gradcam_colored = (gradcam_colored * 255).astype(np.float32)  # -> [0,255] float
 
