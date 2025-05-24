@@ -7,6 +7,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import matplotlib.cm as cm
 from tqdm import tqdm
 import cv2
 import torch
@@ -929,21 +930,32 @@ def generate_prediction_video_with_gradcam(exp_name, data_loader, results_path, 
         # === Chargement de la heatmap Grad-CAM ===
         gradcam_path = os.path.join(results_path, "_GradCAM_Heatmaps", f"{exp_name}", f"frame_{frame_idx}.png")
         if os.path.exists(gradcam_path):
-            # 1. Lire l’image Grad-CAM en couleur (on ignore l'alpha du PNG)
+            # 1. Lire l’image Grad-CAM en niveaux de gris (0-255)
             gradcam_raw = cv2.imread(gradcam_path, cv2.IMREAD_GRAYSCALE)
             gradcam_resized = cv2.resize(gradcam_raw, (radar_size, radar_size), interpolation=cv2.INTER_LINEAR)
 
-            # 2. Normaliser la gradcam pour qu’elle soit entre 0 et 1
-            gradcam_norm = cv2.normalize(gradcam_resized.astype(np.float32), None, 0.0, 1.0, cv2.NORM_MINMAX)
+            # 2. Remettre l’échelle de la Grad-CAM en [-1, 1] si c’est une carte centrée (optionnel selon ta sauvegarde)
+            # Ici on suppose qu’on avait sauvegardé des valeurs dans [0, 255] correspondant à [-1, 1]
+            gradcam_float = gradcam_resized.astype(np.float32) / 255.0  # -> [0, 1]
+            gradcam_centered = gradcam_float * 2 - 1                    # -> [-1, 1]
+            gradcam_clipped = np.clip(gradcam_centered, -1.0, 1.0)
 
-            # 3. Générer la carte couleur avec une colormap
-            gradcam_colored = cv2.applyColorMap((gradcam_norm * 255).astype(np.uint8), cv2.COLORMAP_JET).astype(np.float32)
+            # 3. Normaliser entre [0, 1] pour l’application de la colormap `seismic`
+            gradcam_for_cmap = (gradcam_clipped + 1.0) / 2.0  # -> [0, 1]
+
+            # 4. Appliquer la colormap seismic via matplotlib
+            cmap = cm.get_cmap('seismic')
+            gradcam_colored = cmap(gradcam_for_cmap)[:, :, :3]  # on enlève l’alpha
+            gradcam_colored = (gradcam_colored * 255).astype(np.float32)  # -> [0,255] float
+
+            # 5. Charger et convertir l’image radar (déjà en couleur, 3 canaux)
             radar_float = radar_colored.astype(np.float32)
 
-            # 4. Créer un alpha doux : ex. de 0.4 à 0.8 selon l’intensité
-            alpha = 0.4 + 0.4 * gradcam_norm[..., None]  # forme (H, W, 1)
+            # 6. Alpha progressif selon intensité absolue (|valeurs| proches de 1 sont + visibles)
+            gradcam_magnitude = np.abs(gradcam_clipped)
+            alpha = 0.4 + 0.4 * gradcam_magnitude[..., None]  # forme (H, W, 1)
 
-            # 5. Fusion progressive
+            # 7. Fusion progressive
             overlayed = (1 - alpha) * radar_float + alpha * gradcam_colored
             overlayed = np.clip(overlayed, 0, 255).astype(np.uint8)
 
