@@ -9,8 +9,8 @@ import matplotlib.cm as cm
 # ====== PARAMÈTRES À CONFIGURER ======
 exp_numbers = [2, 10, 17, 26, 41]
 fold_number = 2
-num_samples = 10
-frame_indices = sorted(random.sample(range(1000), num_samples))
+#num_samples = 10
+frame_indices = [279, 479, 742, 904] #sorted(random.sample(range(1000), num_samples))
 output_dir = "./output_gradcam_pairs"
 target_size = (256, 256)  # Resize commun à toutes les cartes
 # =====================================
@@ -33,7 +33,7 @@ for exp_number in exp_numbers:
     def superpose_heatmap(base_img, heatmap_gray):
         """Superpose la heatmap (grayscale) sur l’image de base avec alpha progressive, en utilisant la colormap seismic_r."""
         # Base image mise en couleur (par exemple en VIRIDIS)
-        base_color = cv2.applyColorMap(base_img, cv2.COLORMAP_VIRIDIS).astype(np.float32)
+        base_color = cv2.applyColorMap(base_img, cv2.COLORMAP_BONE).astype(np.float32)
         
         # Normalisation de la heatmap
         heatmap_norm = cv2.normalize(heatmap_gray.astype(np.float32), None, 0.0, 1.0, cv2.NORM_MINMAX)
