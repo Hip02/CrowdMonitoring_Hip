@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 # ====== PARAMÈTRES À CONFIGURER ======
 exp_numbers = [2, 10, 17, 26, 41]
@@ -30,11 +31,22 @@ for exp_number in exp_numbers:
         return matches[0] if matches else None
 
     def superpose_heatmap(base_img, heatmap_gray):
-        """Superpose la heatmap (grayscale) sur l’image de base avec alpha progressive."""
+        """Superpose la heatmap (grayscale) sur l’image de base avec alpha progressive, en utilisant la colormap seismic_r."""
+        # Base image mise en couleur (par exemple en VIRIDIS)
         base_color = cv2.applyColorMap(base_img, cv2.COLORMAP_VIRIDIS).astype(np.float32)
+        
+        # Normalisation de la heatmap
         heatmap_norm = cv2.normalize(heatmap_gray.astype(np.float32), None, 0.0, 1.0, cv2.NORM_MINMAX)
-        heatmap_colored = cv2.applyColorMap((heatmap_norm * 255).astype(np.uint8), cv2.COLORMAP_JET).astype(np.float32)
-        alpha = 0.4 + 0.4 * heatmap_norm[..., None]
+        
+        # Application de la colormap matplotlib 'seismic_r'
+        cmap = cm.seismic_r
+        heatmap_colored = cmap(heatmap_norm)[:, :, :3]  # Enlever l’alpha, garder RGB
+        heatmap_colored = (heatmap_colored * 255).astype(np.float32)
+
+        # Création de l’alpha progressive (même forme que l’image RGB)
+        alpha = 0.4 + 0.4 * heatmap_norm[..., None]  # shape (H, W, 1)
+
+        # Fusion des deux images
         overlay = (1 - alpha) * base_color + alpha * heatmap_colored
         return np.clip(overlay, 0, 255).astype(np.uint8)
 
