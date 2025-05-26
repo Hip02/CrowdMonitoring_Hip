@@ -24,8 +24,8 @@ learning_rates_init = [1e-2, 1e-3, 1e-4]
 results = []
 
 # Grid search
-for hid_l_s, act, lr in itertools.product(activation_functions, learning_rates_init, hidden_layer_sizes):
-    model = MLPRegressor(hidden_layer_sizes=hid_l_s, activation=act, learning_rate_init=lr, max_iter=1000)
+for act, lr, hid_l_s in itertools.product(activation_functions, learning_rates_init, hidden_layer_sizes):
+    model = MLPRegressor(hidden_layer_sizes=hid_l_s, activation=act, learning_rate_init=lr, max_iter=1000, solver='adam', early_stopping=True)
     mean_mse = train_on_custom_folds(model, data_loader, features, "folds_config.yaml")
     results.append(((hid_l_s, act, lr), mean_mse))
     print(f"Tested hidden_layer_sizes={hid_l_s}, activation={act}, learning_rate_init={lr} → Mean MSE: {mean_mse:.4f}")
