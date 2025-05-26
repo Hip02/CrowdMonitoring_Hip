@@ -28,6 +28,8 @@ for act, lr, hid_l_s in itertools.product(activation_functions, learning_rates_i
     model = MLPRegressor(hidden_layer_sizes=hid_l_s, activation=act, learning_rate_init=lr, max_iter=1000, solver='adam', early_stopping=True)
     all_y_pred, all_y_test = train_on_custom_folds(model, data_loader, features, "folds_config.yaml")
     mean_mse = np.mean((all_y_test - all_y_pred) ** 2)
+    all_y_test = np.array(all_y_test)
+    all_y_pred = np.array(all_y_pred)
     results.append(((hid_l_s, act, lr), mean_mse))
     print(f"Tested hidden_layer_sizes={hid_l_s}, activation={act}, learning_rate_init={lr} → Mean MSE: {mean_mse}")
 
