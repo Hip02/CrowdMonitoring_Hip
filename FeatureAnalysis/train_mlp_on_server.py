@@ -17,8 +17,8 @@ features = ["MeanMagnitudes", "StdMagnitudes", "MedianMagnitudes", "SkewnessMagn
 # Hyperparameter grid (MLP)
 hidden_layer_sizes = [(32,), (64,), (128,), (256,), (32,16), (64,32), (128,64), (256,128), 
                       (32,16,8), (64,32,16), (128,64,32), (256,128,64)]
-activation_functions = ['relu', 'tanh', 'logistic']
-learning_rates_init = [1e-1, 1e-2, 1e-3, 1e-4]
+activation_functions = ['tanh', 'logistic']
+learning_rates_init = [1e-1, 1e-2, 1e-3]
 
 # To store results
 results = []
