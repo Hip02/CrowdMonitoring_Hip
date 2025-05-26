@@ -1051,7 +1051,7 @@ def plot_predictions_vs_groundtruth(results_by_experiment, save_path):
         time = 60 * (frames - frames.min()) / (frames.max() - frames.min())
         xticks = np.linspace(time.min(), time.max(), num=13)
         yticks = np.linspace(0, 20, num=5)
-        ylim = (0, 7)
+        ylim = (0, 20)
         xlim = (0, 60)
         # 1️⃣ Raw prediction vs ground truth
         plt.figure(figsize=(16, 5))
