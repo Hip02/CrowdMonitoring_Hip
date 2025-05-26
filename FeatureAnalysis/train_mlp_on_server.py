@@ -26,9 +26,10 @@ results = []
 # Grid search
 for act, lr, hid_l_s in itertools.product(activation_functions, learning_rates_init, hidden_layer_sizes):
     model = MLPRegressor(hidden_layer_sizes=hid_l_s, activation=act, learning_rate_init=lr, max_iter=1000, solver='adam', early_stopping=True)
-    mean_mse = train_on_custom_folds(model, data_loader, features, "folds_config.yaml")
+    all_y_pred, all_y_test = train_on_custom_folds(model, data_loader, features, "folds_config.yaml")
+    mean_mse = np.mean((all_y_test - all_y_pred) ** 2)
     results.append(((hid_l_s, act, lr), mean_mse))
-    print(f"Tested hidden_layer_sizes={hid_l_s}, activation={act}, learning_rate_init={lr} → Mean MSE: {mean_mse:.4f}")
+    print(f"Tested hidden_layer_sizes={hid_l_s}, activation={act}, learning_rate_init={lr} → Mean MSE: {mean_mse}")
 
 # Display best
 if results:
