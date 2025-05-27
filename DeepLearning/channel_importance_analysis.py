@@ -28,13 +28,13 @@ def average_channel_importance(exp, fold):
     np.save(os.path.join(input_folder, "average_channel_importance.npy"), mean_importance)
 
     # Plot
-    channel_labels = [f"Magnitude {i+1}" for i in range(10)] + [f"Phase Δϕ {i+1}" for i in range(10)]
+    channel_labels = [f"$A_{i+1}$ " for i in range(10)] + [f"$\Delta\phi_{i+1}$ " for i in range(10)]
     colors = ["#4477AA"] * 10 + ["#CC6677"] * 10
 
     plt.figure(figsize=(12, 6))
     plt.bar(range(20), mean_importance, yerr=std_importance, capsize=5, color=colors)
     plt.axhline(0, color='black', linewidth=0.8, linestyle='--')
-    plt.xticks(range(20), channel_labels, rotation=45, ha='right')
+    plt.xticks(range(20), channel_labels)
     plt.ylabel("Avg. Prediction Change (Δy)")
     plt.title(f"Average Channel Importance (Exp {exp}, Fold {fold})")
     plt.tight_layout()
