@@ -28,7 +28,7 @@ def average_channel_importance(exp, fold):
     np.save(os.path.join(input_folder, "average_channel_importance.npy"), mean_importance)
 
     # Plot
-    channel_labels = [f"$A_{i+1}$ " for i in range(10)] + [f"$\Delta\phi_{i+1}$ " for i in range(10)]
+    channel_labels = [f"$A_{{t-{i}}}$" if i > 0 else "$A_t$" for i in range(10)] + [f"$\\Delta\\phi_{{{i+1}}}$" for i in range(10)]
     colors = ["#4477AA"] * 10 + ["#CC6677"] * 10
 
     plt.figure(figsize=(12, 6))
