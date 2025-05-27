@@ -36,7 +36,7 @@ def average_channel_importance(exp, fold):
     plt.axhline(0, color='black', linewidth=0.8, linestyle='--')
     plt.xticks(range(20), channel_labels)
     plt.ylabel("Avg. Prediction Change (Δy)")
-    plt.title(f"Average Channel Importance (Exp {exp}, Fold {fold})")
+    plt.title(f"Average Channel Importance")
     plt.tight_layout()
 
     plot_path = os.path.join(input_folder, "average_channel_importance.pdf")
